@@ -122,11 +122,10 @@ export function CreateTournamentForm({ onCancel }: CreateTournamentFormProps) {
               </p>
             ) : (
               <div className="grid gap-2 max-h-60 overflow-y-auto">
-                {filteredPlayers.map((player) => (
-                  <div
+              {filteredPlayers.map((player) => (
+                  <label
                     key={player.id}
                     className="flex items-center gap-3 p-3 rounded-lg hover:bg-secondary cursor-pointer transition-colors"
-                    onClick={() => togglePlayer(player.id)}
                   >
                     <Checkbox
                       checked={selectedPlayers.includes(player.id)}
@@ -138,7 +137,7 @@ export function CreateTournamentForm({ onCancel }: CreateTournamentFormProps) {
                         ({player.elo})
                       </span>
                     </div>
-                  </div>
+                  </label>
                 ))}
               </div>
             )}
