@@ -374,3 +374,52 @@ export function useCompleteTournament() {
     },
   });
 }
+
+export function useDeleteTournament() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (tournamentId: string) => {
+      // 1. Hole alle Tournament-Players mit ihren Statistiken
+      const { data: tournamentPlayers, error: tpError } = await supabase
+        .from("tournament_players")
+        .select("player_id, games_played, wins, elo_change")
+        .eq("tournament_id", tournamentId);
+
+      if (tpError) throw tpError;
+
+      // 2. Korrigiere Spielerstatistiken für jeden Spieler
+      for (const tp of tournamentPlayers || []) {
+        const { data: player } = await supabase
+          .from("players")
+          .select("elo, total_games, total_wins, total_tournaments")
+          .eq("id", tp.player_id)
+          .single();
+
+        if (player) {
+          await supabase
+            .from("players")
+            .update({
+              elo: player.elo - tp.elo_change,
+              total_games: Math.max(0, player.total_games - tp.games_played),
+              total_wins: Math.max(0, player.total_wins - tp.wins),
+              total_tournaments: Math.max(0, player.total_tournaments - 1),
+            })
+            .eq("id", tp.player_id);
+        }
+      }
+
+      // 3. Lösche das Turnier (CASCADE löscht Matches und Tournament-Players automatisch)
+      const { error } = await supabase
+        .from("tournaments")
+        .delete()
+        .eq("id", tournamentId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tournaments"] });
+      queryClient.invalidateQueries({ queryKey: ["players"] });
+    },
+  });
+}

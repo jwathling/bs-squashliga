@@ -1,7 +1,19 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Layout } from "@/components/layout/Layout";
 import { LiveTable } from "@/components/tournaments/LiveTable";
 import { MatchCard } from "@/components/tournaments/MatchCard";
@@ -13,11 +25,12 @@ import {
   useUpdateTournamentPlayer,
   useCompleteTournament,
   useAddRound,
+  useDeleteTournament,
 } from "@/hooks/useTournaments";
 import { useUpdatePlayerStats, usePlayers } from "@/hooks/usePlayers";
 import { calculateMatchEloChanges } from "@/lib/elo";
 import { generateAdditionalRound, calculateTotalMatches } from "@/lib/matchScheduler";
-import { ArrowLeft, Trophy, Plus, CheckCircle } from "lucide-react";
+import { ArrowLeft, Trophy, Plus, CheckCircle, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,7 +38,9 @@ import { useQueryClient } from "@tanstack/react-query";
 
 const TournamentLive = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
   const { data: tournament, isLoading: tournamentLoading } = useTournament(id);
   const { data: tournamentPlayers = [], isLoading: playersLoading } = useTournamentPlayers(id);
@@ -37,6 +52,7 @@ const TournamentLive = () => {
   const updatePlayerStats = useUpdatePlayerStats();
   const completeTournament = useCompleteTournament();
   const addRound = useAddRound();
+  const deleteTournament = useDeleteTournament();
 
   // Set up realtime subscription
   useEffect(() => {
@@ -278,6 +294,17 @@ const TournamentLive = () => {
     }
   };
 
+  const handleDeleteTournament = async () => {
+    try {
+      await deleteTournament.mutateAsync(id!);
+      toast.success("Turnier gelöscht! Spielerstatistiken wurden korrigiert.");
+      navigate("/tournaments");
+    } catch (error) {
+      console.error("Error deleting tournament:", error);
+      toast.error("Fehler beim Löschen des Turniers");
+    }
+  };
+
   return (
     <Layout>
       {/* Header */}
@@ -304,20 +331,48 @@ const TournamentLive = () => {
           </div>
         </div>
         
-        {!isCompleted && (
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleAddRound} disabled={addRound.isPending}>
-              <Plus className="h-4 w-4 mr-2" />
-              Neue Runde
-            </Button>
-            {allMatchesPlayed && (
-              <Button onClick={handleCompleteTournament} disabled={completeTournament.isPending}>
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Turnier beenden
+        <div className="flex gap-2">
+          {!isCompleted && (
+            <>
+              <Button variant="outline" onClick={handleAddRound} disabled={addRound.isPending}>
+                <Plus className="h-4 w-4 mr-2" />
+                Neue Runde
               </Button>
-            )}
-          </div>
-        )}
+              {allMatchesPlayed && (
+                <Button onClick={handleCompleteTournament} disabled={completeTournament.isPending}>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Turnier beenden
+                </Button>
+              )}
+            </>
+          )}
+          
+          <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="icon">
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Turnier löschen?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Dieses Turnier wird unwiderruflich gelöscht. Alle Spielerstatistiken 
+                  (ELO, Siege, Spiele, Turnieranzahl) werden auf den Stand vor dem Turnier zurückgesetzt.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeleteTournament}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {deleteTournament.isPending ? "Löschen..." : "Ja, löschen"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </div>
 
       {/* Live Table */}
