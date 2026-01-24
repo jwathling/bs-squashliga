@@ -29,13 +29,18 @@ function generateAllPairings(playerIds: string[]): Array<[string, string]> {
 /**
  * Optimize match order to minimize consecutive games for same player
  * Uses a greedy algorithm that tracks last played player
+ * @param initialLastPlayers - Optional set of player IDs from the last match of the previous round
  */
-function optimizeMatchOrder(pairings: Array<[string, string]>): Array<[string, string]> {
+function optimizeMatchOrder(
+  pairings: Array<[string, string]>,
+  initialLastPlayers?: Set<string>
+): Array<[string, string]> {
   if (pairings.length <= 1) return pairings;
   
   const result: Array<[string, string]> = [];
   const remaining = [...pairings];
-  let lastPlayers: Set<string> = new Set();
+  // Start with players from the last match of the previous round if provided
+  let lastPlayers: Set<string> = initialLastPlayers || new Set();
   
   while (remaining.length > 0) {
     // Find best next match (one where neither player just played)
@@ -95,11 +100,29 @@ export function calculateTotalMatches(playerCount: number): number {
 
 /**
  * Add another round to an existing tournament
+ * @param lastMatchPlayers - Optional players from the last match of the previous round
  */
 export function generateAdditionalRound(
   playerIds: string[],
   roundNumber: number,
-  previousMatchCount: number
+  previousMatchCount: number,
+  lastMatchPlayers?: { player1Id: string; player2Id: string }
 ): ScheduledMatch[] {
-  return generateRoundSchedule(playerIds, roundNumber, previousMatchCount);
+  if (playerIds.length < 2) return [];
+  
+  const pairings = generateAllPairings(playerIds);
+  
+  // Use players from last match of previous round to optimize first match of new round
+  const initialLastPlayers = lastMatchPlayers 
+    ? new Set([lastMatchPlayers.player1Id, lastMatchPlayers.player2Id])
+    : undefined;
+  
+  const optimizedPairings = optimizeMatchOrder(pairings, initialLastPlayers);
+  
+  return optimizedPairings.map((pairing, index) => ({
+    player1Id: pairing[0],
+    player2Id: pairing[1],
+    matchOrder: previousMatchCount + index + 1,
+    round: roundNumber,
+  }));
 }
