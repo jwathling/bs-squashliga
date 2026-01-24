@@ -41,6 +41,7 @@ const TournamentLive = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   
   const { data: tournament, isLoading: tournamentLoading } = useTournament(id);
   const { data: tournamentPlayers = [], isLoading: playersLoading } = useTournamentPlayers(id);
@@ -299,7 +300,12 @@ const TournamentLive = () => {
   const handleCompleteTournament = async () => {
     try {
       await completeTournament.mutateAsync(tournament.id);
-      toast.success("Turnier beendet!");
+      setShowCompleteDialog(false);
+      toast.success(
+        allMatchesPlayed
+          ? "Turnier beendet!"
+          : `Turnier vorzeitig beendet! ${completedMatches} von ${totalMatches} Spielen gewertet.`
+      );
     } catch (error) {
       toast.error("Fehler beim Beenden");
     }
@@ -349,11 +355,40 @@ const TournamentLive = () => {
                 <Plus className="h-4 w-4 mr-2" />
                 Neue Runde
               </Button>
-              {allMatchesPlayed && (
+              
+              {allMatchesPlayed ? (
                 <Button onClick={handleCompleteTournament} disabled={completeTournament.isPending}>
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Turnier beenden
                 </Button>
+              ) : (
+                <AlertDialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline">
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Turnier beenden
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Turnier vorzeitig beenden?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Es wurden {completedMatches} von {totalMatches} Spielen gespielt. 
+                        Nicht gespielte Matches werden ignoriert. Die bisherigen 
+                        Ergebnisse werden normal gewertet.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={handleCompleteTournament}
+                        disabled={completeTournament.isPending}
+                      >
+                        {completeTournament.isPending ? "Beenden..." : "Ja, beenden"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               )}
             </>
           )}
