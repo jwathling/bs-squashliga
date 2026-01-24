@@ -268,10 +268,21 @@ const TournamentLive = () => {
     try {
       const playerIds = tournamentPlayers.map((tp) => tp.player_id);
       const newRound = tournament.current_round + 1;
-      const matchesPerRound = calculateTotalMatches(playerIds.length);
       const startingOrder = totalMatches;
 
-      const newMatches = generateAdditionalRound(playerIds, newRound, startingOrder);
+      // Find the last match of the current round to avoid consecutive games
+      const currentRoundMatches = matches.filter(m => m.round === tournament.current_round);
+      const lastMatch = currentRoundMatches.length > 0
+        ? currentRoundMatches.reduce((prev, curr) => 
+            curr.match_order > prev.match_order ? curr : prev
+          )
+        : undefined;
+
+      const lastMatchPlayers = lastMatch 
+        ? { player1Id: lastMatch.player1_id, player2Id: lastMatch.player2_id }
+        : undefined;
+
+      const newMatches = generateAdditionalRound(playerIds, newRound, startingOrder, lastMatchPlayers);
 
       await addRound.mutateAsync({
         tournamentId: tournament.id,
