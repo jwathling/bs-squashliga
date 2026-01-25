@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Layout } from "@/components/layout/Layout";
 import { StatCard } from "@/components/ui/stat-card";
+import { OpponentStats } from "@/components/players/OpponentStats";
 import { usePlayer, useUpdatePlayer, useDeletePlayer } from "@/hooks/usePlayers";
 import { usePlayerTournaments } from "@/hooks/useTournaments";
 import { ArrowLeft, Edit2, Check, X, Trophy, Gamepad2, TrendingUp, Medal, Trash2 } from "lucide-react";
@@ -168,6 +169,11 @@ const PlayerProfile = () => {
         <StatCard title="Spiele" value={player.total_games} icon={Gamepad2} />
         <StatCard title="Siege" value={player.total_wins} icon={Medal} />
         <StatCard title="Siegquote" value={`${winRate}%`} icon={Trophy} />
+      </div>
+
+      {/* Opponents */}
+      <div className="mb-8">
+        <OpponentStats playerId={player.id} playerName={player.name} />
       </div>
 
       {/* Tournament History */}
