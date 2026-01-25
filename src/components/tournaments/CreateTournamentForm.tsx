@@ -155,7 +155,7 @@ export function CreateTournamentForm({ onCancel }: CreateTournamentFormProps) {
             className="flex-1"
             disabled={createTournament.isPending || selectedPlayers.length < 3}
           >
-            {createTournament.isPending ? "Erstelle..." : "Turnier starten"}
+            {createTournament.isPending ? "Erstelle..." : "Letz Fetz"}
           </Button>
         </div>
       </form>
