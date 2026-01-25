@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { Home, Users, Trophy, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/logo.svg";
 
 const navigation = [
   { name: "Start", href: "/", icon: Home },

@@ -8,7 +8,7 @@ import { TournamentCard } from "@/components/tournaments/TournamentCard";
 import { usePlayers } from "@/hooks/usePlayers";
 import { useTournaments, useTournamentPlayers } from "@/hooks/useTournaments";
 import { Plus, Trophy, Users, Gamepad2, TrendingUp, ArrowRight } from "lucide-react";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/logo.svg";
 
 const Index = () => {
   const {
