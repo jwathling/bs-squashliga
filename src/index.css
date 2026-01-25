@@ -2,39 +2,39 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Braunschweiger Squashliga Design System - Sporty Blue Theme
-   Modern, clean, athletic aesthetic with vibrant blue accents
+/* Braunschweiger Squashliga Design System - Navy & Gold Theme
+   Inspired by the official crest with navy blue, gold, and copper accents
    All colors in HSL format */
 
 @layer base {
   :root {
     /* Core background and text */
-    --background: 210 25% 97%;
-    --foreground: 215 25% 15%;
+    --background: 220 20% 97%;
+    --foreground: 220 40% 15%;
 
     /* Card surfaces with subtle depth */
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 15%;
+    --card-foreground: 220 40% 15%;
 
     /* Popover elements */
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 15%;
+    --popover-foreground: 220 40% 15%;
 
-    /* Primary: Vibrant sporty blue */
-    --primary: 217 91% 50%;
+    /* Primary: Navy Blue (from shield) */
+    --primary: 220 55% 30%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary: Soft cool gray-blue */
-    --secondary: 210 20% 93%;
-    --secondary-foreground: 215 25% 20%;
+    /* Secondary: Soft cream-gold */
+    --secondary: 45 30% 93%;
+    --secondary-foreground: 220 40% 20%;
 
     /* Muted elements */
-    --muted: 210 15% 92%;
-    --muted-foreground: 215 15% 45%;
+    --muted: 220 15% 92%;
+    --muted-foreground: 220 15% 45%;
 
-    /* Accent: Electric blue for highlights */
-    --accent: 199 89% 48%;
-    --accent-foreground: 0 0% 100%;
+    /* Accent: Gold (from crest border) */
+    --accent: 43 65% 55%;
+    --accent-foreground: 220 40% 15%;
 
     /* Destructive: Athletic red */
     --destructive: 0 72% 51%;
@@ -44,57 +44,57 @@
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
 
-    /* Warning: Caution amber */
-    --warning: 38 92% 50%;
+    /* Warning: Copper/Orange (from lion) */
+    --warning: 25 70% 55%;
     --warning-foreground: 0 0% 100%;
 
     /* Borders and inputs */
-    --border: 214 20% 88%;
-    --input: 214 20% 88%;
-    --ring: 217 91% 50%;
+    --border: 220 20% 88%;
+    --input: 220 20% 88%;
+    --ring: 220 55% 30%;
 
     --radius: 0.75rem;
 
     /* Sidebar */
-    --sidebar-background: 215 25% 12%;
-    --sidebar-foreground: 210 20% 90%;
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 215 25% 18%;
-    --sidebar-accent-foreground: 210 20% 90%;
-    --sidebar-border: 215 20% 20%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-background: 220 40% 15%;
+    --sidebar-foreground: 45 20% 90%;
+    --sidebar-primary: 43 65% 55%;
+    --sidebar-primary-foreground: 220 40% 15%;
+    --sidebar-accent: 220 35% 22%;
+    --sidebar-accent-foreground: 45 20% 90%;
+    --sidebar-border: 220 30% 25%;
+    --sidebar-ring: 43 65% 55%;
 
     /* Custom gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(217 91% 50%), hsl(199 89% 48%));
-    --gradient-hero: linear-gradient(180deg, hsl(217 91% 50% / 0.1), transparent);
+    --gradient-primary: linear-gradient(135deg, hsl(220 55% 30%), hsl(220 45% 40%));
+    --gradient-hero: linear-gradient(180deg, hsl(220 55% 30% / 0.1), transparent);
     
     /* Custom shadows */
-    --shadow-card: 0 4px 20px -4px hsl(217 91% 50% / 0.15);
-    --shadow-button: 0 4px 14px -3px hsl(217 91% 50% / 0.4);
+    --shadow-card: 0 4px 20px -4px hsl(220 55% 30% / 0.15);
+    --shadow-button: 0 4px 14px -3px hsl(220 55% 30% / 0.4);
   }
 
   .dark {
-    --background: 215 25% 9%;
-    --foreground: 210 20% 95%;
+    --background: 220 35% 10%;
+    --foreground: 45 20% 95%;
 
-    --card: 215 25% 12%;
-    --card-foreground: 210 20% 95%;
+    --card: 220 35% 14%;
+    --card-foreground: 45 20% 95%;
 
-    --popover: 215 25% 12%;
-    --popover-foreground: 210 20% 95%;
+    --popover: 220 35% 14%;
+    --popover-foreground: 45 20% 95%;
 
-    --primary: 217 91% 60%;
-    --primary-foreground: 215 25% 10%;
+    --primary: 220 50% 45%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 215 20% 18%;
-    --secondary-foreground: 210 20% 90%;
+    --secondary: 220 25% 20%;
+    --secondary-foreground: 45 20% 90%;
 
-    --muted: 215 20% 18%;
-    --muted-foreground: 215 15% 55%;
+    --muted: 220 25% 18%;
+    --muted-foreground: 220 15% 55%;
 
-    --accent: 199 89% 55%;
-    --accent-foreground: 215 25% 10%;
+    --accent: 43 65% 50%;
+    --accent-foreground: 220 35% 10%;
 
     --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
@@ -102,21 +102,21 @@
     --success: 142 71% 50%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 38 92% 55%;
+    --warning: 25 70% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 215 20% 20%;
-    --input: 215 20% 20%;
-    --ring: 217 91% 60%;
+    --border: 220 25% 22%;
+    --input: 220 25% 22%;
+    --ring: 220 50% 45%;
 
-    --sidebar-background: 215 25% 8%;
-    --sidebar-foreground: 210 20% 90%;
-    --sidebar-primary: 217 91% 65%;
-    --sidebar-primary-foreground: 215 25% 10%;
-    --sidebar-accent: 215 25% 15%;
-    --sidebar-accent-foreground: 210 20% 90%;
-    --sidebar-border: 215 20% 15%;
-    --sidebar-ring: 217 91% 65%;
+    --sidebar-background: 220 35% 8%;
+    --sidebar-foreground: 45 20% 90%;
+    --sidebar-primary: 43 65% 55%;
+    --sidebar-primary-foreground: 220 35% 10%;
+    --sidebar-accent: 220 30% 16%;
+    --sidebar-accent-foreground: 45 20% 90%;
+    --sidebar-border: 220 25% 18%;
+    --sidebar-ring: 43 65% 55%;
   }
 }
 

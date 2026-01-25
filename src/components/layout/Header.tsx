@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import { Home, Users, Trophy, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import logo from "@/assets/logo.png";
 
 const navigation = [
   { name: "Start", href: "/", icon: Home },
@@ -19,9 +20,7 @@ export function Header() {
       <div className="container flex h-16 items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-primary shadow-button">
-            <Trophy className="h-5 w-5 text-primary-foreground" />
-          </div>
+          <img src={logo} alt="Braunschweiger Squashliga" className="h-12 w-12 object-contain" />
           <div className="hidden sm:block">
             <h1 className="text-lg font-bold text-foreground">Braunschweiger</h1>
             <p className="text-xs text-muted-foreground -mt-1">Squashliga</p>
