@@ -8,6 +8,8 @@ import { TournamentCard } from "@/components/tournaments/TournamentCard";
 import { usePlayers } from "@/hooks/usePlayers";
 import { useTournaments, useTournamentPlayers } from "@/hooks/useTournaments";
 import { Plus, Trophy, Users, Gamepad2, TrendingUp, ArrowRight } from "lucide-react";
+import logo from "@/assets/logo.png";
+
 const Index = () => {
   const {
     data: players = [],
@@ -32,15 +34,13 @@ const Index = () => {
       <section className="relative py-8 md:py-16 mb-8">
         <div className="absolute inset-0 bg-gradient-hero rounded-3xl" />
         <div className="relative text-center px-4">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-primary shadow-button mb-6">
-            <Trophy className="h-10 w-10 text-primary-foreground" />
-          </div>
+          <img src={logo} alt="Braunschweiger Squashliga Logo" className="w-24 h-24 mx-auto mb-6" />
           <h1 className="text-3xl md:text-5xl font-bold text-foreground mb-4">
             Braunschweiger Squashliga 
             <span className="block text-gradient">Squashliga</span>
           </h1>
           <p className="text-lg text-muted-foreground max-w-md mx-auto mb-8">
-            Organisiere Turniere, tracke Spieler und erlebe spannende Squash-Duelle mit Live-ELO-Berechnung.
+            Na Champ, heute schon gesquasht?
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/tournaments/new">
