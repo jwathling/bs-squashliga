@@ -82,7 +82,7 @@ const Index = () => {
               </Button>
             </Link>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-4">
             {playersLoading ? <p className="text-muted-foreground text-center py-8">Lade Spieler...</p> : topPlayers.length === 0 ? <div className="text-center py-8">
                 <p className="text-muted-foreground mb-4">Noch keine Spieler vorhanden</p>
                 <Link to="/players">
@@ -109,7 +109,7 @@ const Index = () => {
               </Button>
             </Link>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-4">
             {tournamentsLoading ? <p className="text-muted-foreground text-center py-8">Lade Turniere...</p> : recentTournaments.length === 0 ? <div className="text-center py-8">
                 <p className="text-muted-foreground mb-4">Noch keine Turniere vorhanden</p>
                 <Link to="/tournaments/new">
