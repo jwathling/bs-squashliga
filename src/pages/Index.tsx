@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Layout } from "@/components/layout/Layout";
+import { StatCard } from "@/components/ui/stat-card";
 import { PlayerCard } from "@/components/players/PlayerCard";
 import { TournamentCard } from "@/components/tournaments/TournamentCard";
 import { usePlayers } from "@/hooks/usePlayers";
@@ -26,79 +27,44 @@ const Index = () => {
   const topPlayers = [...players].sort((a, b) => b.elo - a.elo).slice(0, 5);
 
   // Calculate stats
-  const totalGames = players.reduce((sum, p) => sum + p.total_games, 0) / 2;
+  const totalGames = players.reduce((sum, p) => sum + p.total_games, 0) / 2; // Divide by 2 since each game involves 2 players
+  const activeTournaments = tournaments.filter(t => t.status === "active").length;
   return <Layout>
-      {/* Hero Section with Premium Gradient */}
-      <section className="relative bg-hero-premium -mx-4 md:-mx-8 -mt-6 md:-mt-8 px-4 md:px-8 pt-12 md:pt-20 pb-28 md:pb-32">
-        {/* White wave at bottom */}
-        <div className="hero-wave" />
-        
-        <div className="relative z-10 max-w-6xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            {/* Left Side - Hero Copy */}
-            <div className="text-left">
-              <img src={logo} alt="Braunschweiger Squashliga Logo" className="w-24 h-24 md:w-32 md:h-32 mb-6" />
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 leading-tight">
-                Braunschweiger
-                <span className="block text-white/90">Squashliga</span>
-              </h1>
-              <p className="text-lg md:text-xl text-white/70 max-w-md mb-8">
-                Na Champ, heute schon gesquasht?
-              </p>
-              <div className="flex flex-wrap items-center gap-4">
-                <Link to="/tournaments/new">
-                  <Button size="lg" className="bg-white text-primary hover:bg-white/90 rounded-full px-8 shadow-lg">
-                    <Plus className="h-5 w-5 mr-2" />
-                    Neues Turnier
-                  </Button>
-                </Link>
-                <Link to="/players" className="text-white/80 hover:text-white font-medium flex items-center gap-2 transition-colors">
-                  <Users className="h-5 w-5" />
-                  Spieler verwalten
-                </Link>
-              </div>
-            </div>
-
-            {/* Right Side - KPI Cards */}
-            <div className="flex justify-center lg:justify-end">
-              <div className="grid grid-cols-3 gap-3 md:gap-4 w-full max-w-md">
-                <Card className="bg-white rounded-2xl shadow-xl border-0">
-                  <CardContent className="p-4 md:p-5 text-center">
-                    <div className="flex justify-center mb-2">
-                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                        <Users className="h-5 w-5 text-primary" />
-                      </div>
-                    </div>
-                    <p className="text-2xl md:text-3xl font-bold text-foreground">{players.length}</p>
-                    <p className="text-xs md:text-sm text-muted-foreground mt-1">Spieler</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-white rounded-2xl shadow-xl border-0">
-                  <CardContent className="p-4 md:p-5 text-center">
-                    <div className="flex justify-center mb-2">
-                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                        <Trophy className="h-5 w-5 text-primary" />
-                      </div>
-                    </div>
-                    <p className="text-2xl md:text-3xl font-bold text-foreground">{tournaments.length}</p>
-                    <p className="text-xs md:text-sm text-muted-foreground mt-1">Turniere</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-white rounded-2xl shadow-xl border-0">
-                  <CardContent className="p-4 md:p-5 text-center">
-                    <div className="flex justify-center mb-2">
-                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                        <Gamepad2 className="h-5 w-5 text-primary" />
-                      </div>
-                    </div>
-                    <p className="text-2xl md:text-3xl font-bold text-foreground">{Math.round(totalGames)}</p>
-                    <p className="text-xs md:text-sm text-muted-foreground mt-1">Spiele</p>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
+      {/* Hero Section */}
+      <section className="relative py-8 md:py-16 mb-8">
+        <div className="absolute inset-0 bg-gradient-hero rounded-3xl" />
+        <div className="relative text-center px-4">
+          <img src={logo} alt="Braunschweiger Squashliga Logo" className="w-48 h-48 md:w-64 md:h-64 mx-auto mb-6" />
+          <h1 className="text-3xl md:text-5xl font-bold text-foreground mb-4">
+            Braunschweiger Squashliga 
+            <span className="block text-gradient">Squashliga</span>
+          </h1>
+          <p className="text-lg text-muted-foreground max-w-md mx-auto mb-8">
+            Na Champ, heute schon gesquasht?
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link to="/tournaments/new">
+              <Button size="lg" className="shadow-button w-full sm:w-auto">
+                <Plus className="h-5 w-5 mr-2" />
+                Neues Turnier
+              </Button>
+            </Link>
+            <Link to="/players">
+              <Button size="lg" variant="outline" className="w-full sm:w-auto">
+                <Users className="h-5 w-5 mr-2" />
+                Spieler verwalten
+              </Button>
+            </Link>
           </div>
         </div>
+      </section>
+
+      {/* Stats Section */}
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <StatCard title="Spieler" value={players.length} icon={Users} />
+        <StatCard title="Turniere" value={tournaments.length} icon={Trophy} />
+        <StatCard title="Spiele" value={Math.round(totalGames)} icon={Gamepad2} />
+        <StatCard title="Aktive Turniere" value={activeTournaments} icon={TrendingUp} />
       </section>
 
       {/* Top Players & Recent Tournaments */}
