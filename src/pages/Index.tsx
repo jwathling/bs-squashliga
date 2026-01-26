@@ -9,6 +9,7 @@ import { usePlayers } from "@/hooks/usePlayers";
 import { useTournaments, useTournamentPlayers } from "@/hooks/useTournaments";
 import { Plus, Trophy, Users, Gamepad2, TrendingUp, ArrowRight } from "lucide-react";
 import logo from "@/assets/logo.png";
+
 const Index = () => {
   const {
     data: players = [],
@@ -29,43 +30,41 @@ const Index = () => {
   const totalGames = players.reduce((sum, p) => sum + p.total_games, 0) / 2; // Divide by 2 since each game involves 2 players
   const activeTournaments = tournaments.filter(t => t.status === "active").length;
   return <Layout>
-      {/* Hero Section with Wave Background */}
-      <section className="relative bg-hero-wave overflow-hidden -mx-4 md:-mx-8 px-4 md:px-8 pt-8 md:pt-16 pb-32 mb-8">
-        <div className="container relative z-10">
-          <div className="grid lg:grid-cols-2 gap-8 items-center">
-            {/* Left Side - Content */}
-            <div className="text-left">
-              <img src={logo} alt="Braunschweiger Squashliga Logo" className="w-32 h-32 md:w-48 md:h-48 mb-6" />
-              <h1 className="text-3xl md:text-5xl font-bold text-white mb-4 my-[10px]">
-              <span className="block text-white/90">Squashliga</span>
-              </h1>
-              <p className="text-lg text-white/80 max-w-md mb-8">
-                Na Champ, heute schon gesquasht?
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Link to="/tournaments/new">
-                  <Button size="lg" className="bg-white text-primary hover:bg-white/90 shadow-button w-full sm:w-auto">
-                    <Plus className="h-5 w-5 mr-2" />
-                    Neues Turnier
-                  </Button>
-                </Link>
-                <Link to="/players">
-                  <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 w-full sm:w-auto">
-                    <Users className="h-5 w-5 mr-2" />
-                    Spieler verwalten
-                  </Button>
-                </Link>
-              </div>
-            </div>
-
-            {/* Right Side - Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <StatCard title="Spieler" value={players.length} icon={Users} className="bg-white/95 backdrop-blur" />
-              <StatCard title="Turniere" value={tournaments.length} icon={Trophy} className="bg-white/95 backdrop-blur" />
-              <StatCard title="Spiele" value={Math.round(totalGames)} icon={Gamepad2} className="bg-white/95 backdrop-blur" />
-            </div>
+      {/* Hero Section */}
+      <section className="relative py-8 md:py-16 mb-8">
+        <div className="absolute inset-0 bg-gradient-hero rounded-3xl" />
+        <div className="relative text-center px-4">
+          <img src={logo} alt="Braunschweiger Squashliga Logo" className="w-48 h-48 md:w-64 md:h-64 mx-auto mb-6" />
+          <h1 className="text-3xl md:text-5xl font-bold text-foreground mb-4">
+            Braunschweiger Squashliga 
+            <span className="block text-gradient">Squashliga</span>
+          </h1>
+          <p className="text-lg text-muted-foreground max-w-md mx-auto mb-8">
+            Na Champ, heute schon gesquasht?
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link to="/tournaments/new">
+              <Button size="lg" className="shadow-button w-full sm:w-auto">
+                <Plus className="h-5 w-5 mr-2" />
+                Neues Turnier
+              </Button>
+            </Link>
+            <Link to="/players">
+              <Button size="lg" variant="outline" className="w-full sm:w-auto">
+                <Users className="h-5 w-5 mr-2" />
+                Spieler verwalten
+              </Button>
+            </Link>
           </div>
         </div>
+      </section>
+
+      {/* Stats Section */}
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <StatCard title="Spieler" value={players.length} icon={Users} />
+        <StatCard title="Turniere" value={tournaments.length} icon={Trophy} />
+        <StatCard title="Spiele" value={Math.round(totalGames)} icon={Gamepad2} />
+        <StatCard title="Aktive Turniere" value={activeTournaments} icon={TrendingUp} />
       </section>
 
       {/* Top Players & Recent Tournaments */}
