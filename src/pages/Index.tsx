@@ -38,8 +38,8 @@ const Index = () => {
             Braunschweiger Squashliga 
             <span className="block text-gradient my-[20px]">Squashliga</span>
           </h1>
-          <p className="text-lg text-muted-foreground max-w-md mx-auto mb-8">
-            Na Champ, heute schon gesquasht?
+          <p className="text-lg text-muted-foreground max-w-md mx-auto mb-8 text-center">
+            Hey Champ, heute schon gesquasht?  
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/tournaments/new">
