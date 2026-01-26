@@ -8,7 +8,7 @@ import { TournamentCard } from "@/components/tournaments/TournamentCard";
 import { usePlayers } from "@/hooks/usePlayers";
 import { useTournaments, useTournamentPlayers } from "@/hooks/useTournaments";
 import { Plus, Trophy, Users, Gamepad2, TrendingUp, ArrowRight } from "lucide-react";
-import logo from "@/assets/logo.svg";
+import logo from "@/assets/logo.png";
 
 const Index = () => {
   const {
@@ -34,7 +34,7 @@ const Index = () => {
       <section className="relative py-8 md:py-16 mb-8">
         <div className="absolute inset-0 bg-gradient-hero rounded-3xl" />
         <div className="relative text-center px-4">
-          <img src={logo} alt="Braunschweiger Squashliga Logo" className="w-24 h-24 mx-auto mb-6" />
+          <img src={logo} alt="Braunschweiger Squashliga Logo" className="w-48 h-48 md:w-64 md:h-64 mx-auto mb-6" />
           <h1 className="text-3xl md:text-5xl font-bold text-foreground mb-4">
             Braunschweiger Squashliga 
             <span className="block text-gradient">Squashliga</span>
