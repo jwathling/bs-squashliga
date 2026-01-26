@@ -36,7 +36,7 @@ const Index = () => {
           <img alt="Braunschweiger Squashliga Logo" className="w-48 h-48 md:w-64 md:h-64 mx-auto mb-6" src="/lovable-uploads/3c3707a3-af89-4662-9b8d-21700999505e.png" />
           <h1 className="text-3xl md:text-5xl font-bold text-foreground mb-4">
             Braunschweiger Squashliga 
-            <span className="block text-gradient">Squashliga</span>
+            <span className="block text-gradient my-[20px]">Squashliga</span>
           </h1>
           <p className="text-lg text-muted-foreground max-w-md mx-auto mb-8">
             Na Champ, heute schon gesquasht?
