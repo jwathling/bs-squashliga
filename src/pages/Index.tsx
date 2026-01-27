@@ -59,7 +59,7 @@ const Index = () => {
       </section>
 
       {/* Stats Section */}
-      <section className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+      <section className="grid grid-cols-3 gap-4 mb-8">
         <StatCard title="Spieler" value={players.length} icon={Users} />
         <StatCard title="Turniere" value={tournaments.length} icon={Trophy} />
         <StatCard title="Spiele" value={Math.round(totalGames)} icon={Gamepad2} />
