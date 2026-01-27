@@ -27,7 +27,7 @@ const Index = () => {
 
   // Calculate stats
   const totalGames = players.reduce((sum, p) => sum + p.total_games, 0) / 2; // Divide by 2 since each game involves 2 players
-  const activeTournaments = tournaments.filter(t => t.status === "active").length;
+  
   return <Layout>
       {/* Hero Section */}
       <section className="relative py-8 md:py-16 mb-8">
@@ -59,11 +59,10 @@ const Index = () => {
       </section>
 
       {/* Stats Section */}
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <section className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
         <StatCard title="Spieler" value={players.length} icon={Users} />
         <StatCard title="Turniere" value={tournaments.length} icon={Trophy} />
         <StatCard title="Spiele" value={Math.round(totalGames)} icon={Gamepad2} />
-        <StatCard title="Aktive Turniere" value={activeTournaments} icon={TrendingUp} />
       </section>
 
       {/* Top Players & Recent Tournaments */}
@@ -82,7 +81,7 @@ const Index = () => {
               </Button>
             </Link>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
             {playersLoading ? <p className="text-muted-foreground text-center py-8">Lade Spieler...</p> : topPlayers.length === 0 ? <div className="text-center py-8">
                 <p className="text-muted-foreground mb-4">Noch keine Spieler vorhanden</p>
                 <Link to="/players">
@@ -109,7 +108,7 @@ const Index = () => {
               </Button>
             </Link>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
             {tournamentsLoading ? <p className="text-muted-foreground text-center py-8">Lade Turniere...</p> : recentTournaments.length === 0 ? <div className="text-center py-8">
                 <p className="text-muted-foreground mb-4">Noch keine Turniere vorhanden</p>
                 <Link to="/tournaments/new">
