@@ -1,86 +1,71 @@
 
 
-# ELO-Konsistenz Fix und Datenkorrektur
+# Verbesserung des Match-Scheduling-Algorithmus
 
-## Zusammenfassung
-1. **Code-Fix**: ELO-Berechnung in TournamentLive.tsx anpassen, damit zukünftige Turniere konsistente Werte liefern
-2. **Datenkorrektur**: Globale Spieler-ELO auf die korrekten Werte nach dem letzten Turnier setzen
+## Problem-Zusammenfassung
+Bei 5 Spielern spielt Ron in Spiel 9 und 10 hintereinander. Der Greedy-Algorithmus wählt immer das "beste" nächste Spiel, plant aber nicht voraus.
 
----
-
-## Teil 1: Code-Änderungen
-
-### Datei: `src/pages/TournamentLive.tsx`
-
-**Änderung 1 - ELO-Berechnung (ca. Zeile 148-154):**
-Statt der aktuellen globalen ELO wird die turnier-basierte ELO verwendet:
-```typescript
-// Berechne aktuelle Turnier-ELO für beide Spieler
-const p1CurrentTournamentElo = tp1.elo_at_start + tp1.elo_change;
-const p2CurrentTournamentElo = tp2.elo_at_start + tp2.elo_change;
-
-const eloChanges = calculateMatchEloChanges(
-  p1CurrentTournamentElo,
-  p2CurrentTournamentElo,
-  player1Score,
-  player2Score
-);
-```
-
-**Änderung 2 - Globale ELO-Aktualisierung (ca. Zeile 242-258):**
-Die globale ELO wird basierend auf Turnier-Start + Änderung berechnet:
-```typescript
-await Promise.all([
-  updatePlayerStats.mutateAsync({
-    id: match.player1_id,
-    elo: tp1.elo_at_start + p1EloChange,
-    // ... rest bleibt gleich
-  }),
-  updatePlayerStats.mutateAsync({
-    id: match.player2_id,
-    elo: tp2.elo_at_start + p2EloChange,
-    // ... rest bleibt gleich
-  }),
-]);
-```
-
-**Änderung 3 - Revert-Logik anpassen (ca. Zeile 161-179):**
-Wenn ein bereits gespieltes Match geändert wird, muss die Revert-Logik auch die turnier-basierte ELO verwenden.
+## Bestehende Funktionalität
+Der Runden-Übergang ist bereits implementiert (`generateAdditionalRound` mit `lastMatchPlayers` Parameter). Das erste Spiel einer neuen Runde berücksichtigt bereits die Spieler des letzten Spiels der vorherigen Runde.
 
 ---
 
-## Teil 2: Datenkorrektur
+## Lösung: Look-Ahead Optimierung
 
-Die globale ELO der Spieler wird auf die Werte gesetzt, die sich aus dem letzten Turnier ("Dienstagsprügelei") ergeben:
+### Datei: `src/lib/matchScheduler.ts`
 
-| Spieler | Aktuell | Korrigiert auf |
-|---------|---------|----------------|
-| Jan     | 1019    | **1037**       |
-| Jonny   | 1179    | **1175**       |
-| Mitze   | 1010    | **992**        |
-| Ron     | 792     | **796**        |
+**1. Neue Hilfsfunktion `wouldCauseBackToBack`:**
+Prüft rekursiv, ob die verbleibenden Spiele ohne Back-to-Back-Konflikte angeordnet werden können.
 
-Diese Korrektur erfolgt über direkte Datenbank-Updates.
-
----
-
-## Betroffene Dateien
-- `src/pages/TournamentLive.tsx` (Code-Fix)
-- Datenbank: `players` Tabelle (Datenkorrektur)
+**2. Verbesserte `optimizeMatchOrder` Funktion:**
+- Sammelt alle Kandidaten mit gleichem Score
+- Bei wenigen verbleibenden Spielen: simuliert Auswirkungen jeder Wahl
+- Wählt den Kandidaten, der am Ende keine Back-to-Back-Situation verursacht
 
 ---
 
 ## Technische Details
 
-### Warum funktioniert der Fix?
-- **Vorher**: Jedes Match berechnet ELO basierend auf `players.elo` (globale ELO), die sich nach jedem Match ändert
-- **Nachher**: Jedes Match berechnet ELO basierend auf `elo_at_start + elo_change` (Turnier-konsistent)
-- **Ergebnis**: Die finale globale ELO ist immer exakt `elo_at_start + elo_change`
-
-### Formel-Beispiel für Jonny:
 ```text
-Turnier-Start: 1081
-Nach allen Spielen: elo_change = +94
-Globale ELO = 1081 + 94 = 1175 ✓
+Algorithmus-Ablauf:
+1. Finde alle Spiele mit bestem Score (keine Spieler aus letztem Match)
+2. Falls mehrere gleichwertig UND ≤4 Spiele übrig:
+   → Für jeden Kandidaten simulieren: führt diese Wahl zu Back-to-Back am Ende?
+   → Wähle Kandidat ohne Back-to-Back-Folge
+3. Ansonsten: wähle ersten besten Kandidaten (wie bisher)
 ```
+
+**`wouldCauseBackToBack` Funktion:**
+```text
+- Wenn nur 1 Spiel übrig: prüfe ob einer der Spieler gerade gespielt hat
+- Sonst: rekursiv prüfen ob es einen Pfad ohne Konflikte gibt
+- Gibt true zurück wenn Back-to-Back unvermeidbar
+```
+
+---
+
+## Erwartetes Ergebnis
+
+**5 Spieler - Vorher:**
+```text
+9. Jan vs Ron
+10. Mitze vs Ron ← Ron spielt 2x hintereinander
+```
+
+**5 Spieler - Nachher:**
+```text
+Optimierte Reihenfolge ohne aufeinanderfolgende Spiele
+```
+
+**Runden-Übergang funktioniert weiterhin:**
+- Letztes Spiel Runde 1: z.B. Jan vs Mitze
+- Erstes Spiel Runde 2: keiner von beiden spielt
+
+---
+
+## Betroffene Dateien
+- `src/lib/matchScheduler.ts`
+
+## Hinweis
+Das bestehende Test-Turnier muss gelöscht und neu erstellt werden, damit der neue Spielplan generiert wird.
 
