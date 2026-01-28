@@ -14,6 +14,28 @@ export interface ScheduledMatch {
 }
 
 /**
+ * Optimal 6-player schedule template (indices into sorted player array)
+ * This pattern ensures balanced wait times (max 4 matches gap) and no back-to-back
+ */
+const SIX_PLAYER_TEMPLATE: Array<[number, number]> = [
+  [0, 1], // A-B
+  [2, 3], // C-D
+  [4, 5], // E-F
+  [3, 1], // D-B
+  [4, 0], // E-A
+  [2, 5], // C-F
+  [3, 4], // D-E
+  [2, 1], // C-B
+  [5, 0], // F-A
+  [1, 4], // B-E
+  [5, 3], // F-D
+  [2, 0], // C-A
+  [1, 5], // B-F
+  [2, 4], // C-E
+  [0, 3], // A-D
+];
+
+/**
  * Generate all possible pairings for a round-robin tournament
  */
 function generateAllPairings(playerIds: string[]): Array<[string, string]> {
@@ -26,6 +48,13 @@ function generateAllPairings(playerIds: string[]): Array<[string, string]> {
   }
   
   return pairings;
+}
+
+/**
+ * Generate pairings using the optimal 6-player template
+ */
+function generate6PlayerPairings(playerIds: string[]): Array<[string, string]> {
+  return SIX_PLAYER_TEMPLATE.map(([i, j]) => [playerIds[i], playerIds[j]]);
 }
 
 /**
@@ -221,8 +250,15 @@ export function generateRoundSchedule(
 ): ScheduledMatch[] {
   if (playerIds.length < 2) return [];
   
-  const pairings = generateAllPairings(playerIds);
-  const optimizedPairings = optimizeMatchOrder(pairings, undefined, playerIds);
+  let optimizedPairings: Array<[string, string]>;
+  
+  // Use optimal template for 6 players
+  if (playerIds.length === 6) {
+    optimizedPairings = generate6PlayerPairings(playerIds);
+  } else {
+    const pairings = generateAllPairings(playerIds);
+    optimizedPairings = optimizeMatchOrder(pairings, undefined, playerIds);
+  }
   
   return optimizedPairings.map((pairing, index) => ({
     player1Id: pairing[0],
@@ -251,14 +287,21 @@ export function generateAdditionalRound(
 ): ScheduledMatch[] {
   if (playerIds.length < 2) return [];
   
-  const pairings = generateAllPairings(playerIds);
+  let optimizedPairings: Array<[string, string]>;
   
-  // Use players from last match of previous round to optimize first match of new round
-  const initialLastPlayers = lastMatchPlayers 
-    ? new Set([lastMatchPlayers.player1Id, lastMatchPlayers.player2Id])
-    : undefined;
-  
-  const optimizedPairings = optimizeMatchOrder(pairings, initialLastPlayers, playerIds);
+  // Use optimal template for 6 players
+  if (playerIds.length === 6) {
+    optimizedPairings = generate6PlayerPairings(playerIds);
+  } else {
+    const pairings = generateAllPairings(playerIds);
+    
+    // Use players from last match of previous round to optimize first match of new round
+    const initialLastPlayers = lastMatchPlayers 
+      ? new Set([lastMatchPlayers.player1Id, lastMatchPlayers.player2Id])
+      : undefined;
+    
+    optimizedPairings = optimizeMatchOrder(pairings, initialLastPlayers, playerIds);
+  }
   
   return optimizedPairings.map((pairing, index) => ({
     player1Id: pairing[0],
