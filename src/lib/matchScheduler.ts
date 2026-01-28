@@ -1,7 +1,9 @@
 /**
  * Round-robin tournament scheduler
  * Creates matchups where each player plays every other player
- * Optimized to minimize consecutive games for the same player
+ * Optimized to:
+ * 1. Minimize consecutive games for the same player (no back-to-back)
+ * 2. Balance wait times so all players have similar gaps between games
  */
 
 export interface ScheduledMatch {
@@ -24,6 +26,36 @@ function generateAllPairings(playerIds: string[]): Array<[string, string]> {
   }
   
   return pairings;
+}
+
+/**
+ * Score a match based on idle times and back-to-back status
+ */
+function scoreMatch(
+  pairing: [string, string],
+  lastPlayers: Set<string>,
+  idleTime: Map<string, number>
+): { isBackToBack: boolean; idleScore: number } {
+  const [p1, p2] = pairing;
+  const isBackToBack = lastPlayers.has(p1) || lastPlayers.has(p2);
+  const idleScore = (idleTime.get(p1) || 0) + (idleTime.get(p2) || 0);
+  return { isBackToBack, idleScore };
+}
+
+/**
+ * Update idle times after a match is selected
+ */
+function updateIdleTimes(
+  idleTime: Map<string, number>,
+  selectedPlayers: [string, string]
+): void {
+  for (const [id, time] of idleTime) {
+    if (id === selectedPlayers[0] || id === selectedPlayers[1]) {
+      idleTime.set(id, 0); // Player just played
+    } else {
+      idleTime.set(id, time + 1); // Player waited another match
+    }
+  }
 }
 
 /**
@@ -57,13 +89,18 @@ function wouldCauseBackToBack(
 }
 
 /**
- * Optimize match order to minimize consecutive games for same player
- * Uses a greedy algorithm with look-ahead to prevent back-to-back at the end
+ * Optimize match order to:
+ * 1. Avoid back-to-back games (priority)
+ * 2. Balance idle times across players (fairness)
+ * 
+ * Uses idle-time scoring combined with look-ahead to prevent conflicts
  * @param initialLastPlayers - Optional set of player IDs from the last match of the previous round
+ * @param playerIds - All player IDs to track idle times
  */
 function optimizeMatchOrder(
   pairings: Array<[string, string]>,
-  initialLastPlayers?: Set<string>
+  initialLastPlayers?: Set<string>,
+  playerIds?: string[]
 ): Array<[string, string]> {
   if (pairings.length <= 1) return pairings;
   
@@ -71,67 +108,103 @@ function optimizeMatchOrder(
   const remaining = [...pairings];
   let lastPlayers: Set<string> = initialLastPlayers || new Set();
   
+  // Initialize idle time tracking for all players
+  const allPlayerIds = playerIds || [...new Set(pairings.flat())];
+  const idleTime: Map<string, number> = new Map();
+  for (const id of allPlayerIds) {
+    // Players from initialLastPlayers just played, others start with idle=1
+    idleTime.set(id, initialLastPlayers?.has(id) ? 0 : 1);
+  }
+  
   while (remaining.length > 0) {
     let bestIndex = 0;
     
-    // When few matches remain, use exhaustive look-ahead
     // Use exhaustive look-ahead for small tournaments (up to 10 matches = 5 players)
     if (remaining.length <= 10) {
       let foundValidPath = false;
       
-      // Try all matches in order of preference (score 2, then 1, then 0)
-      // and pick the first one that leads to a back-to-back-free sequence
-      for (let targetScore = 2; targetScore >= 0 && !foundValidPath; targetScore--) {
-        for (let i = 0; i < remaining.length; i++) {
+      // Separate matches into non-back-to-back and back-to-back groups
+      const nonBackToBack: Array<{ index: number; idleScore: number }> = [];
+      const backToBack: Array<{ index: number; idleScore: number }> = [];
+      
+      for (let i = 0; i < remaining.length; i++) {
+        const { isBackToBack, idleScore } = scoreMatch(remaining[i], lastPlayers, idleTime);
+        if (isBackToBack) {
+          backToBack.push({ index: i, idleScore });
+        } else {
+          nonBackToBack.push({ index: i, idleScore });
+        }
+      }
+      
+      // Sort by idle score descending (prefer players who waited longest)
+      nonBackToBack.sort((a, b) => b.idleScore - a.idleScore);
+      backToBack.sort((a, b) => b.idleScore - a.idleScore);
+      
+      // Try non-back-to-back matches first, in order of idle score
+      for (const { index: i } of nonBackToBack) {
+        const [p1, p2] = remaining[i];
+        const testRemaining = remaining.filter((_, idx) => idx !== i);
+        const testLastPlayers = new Set([p1, p2]);
+        
+        if (!wouldCauseBackToBack(testRemaining, testLastPlayers)) {
+          bestIndex = i;
+          foundValidPath = true;
+          break;
+        }
+      }
+      
+      // If no valid non-back-to-back path, try back-to-back matches
+      if (!foundValidPath) {
+        for (const { index: i } of backToBack) {
           const [p1, p2] = remaining[i];
-          let score = 2;
-          if (lastPlayers.has(p1)) score--;
-          if (lastPlayers.has(p2)) score--;
+          const testRemaining = remaining.filter((_, idx) => idx !== i);
+          const testLastPlayers = new Set([p1, p2]);
           
-          if (score === targetScore) {
-            const testRemaining = remaining.filter((_, idx) => idx !== i);
-            const testLastPlayers = new Set([p1, p2]);
-            
-            if (!wouldCauseBackToBack(testRemaining, testLastPlayers)) {
-              bestIndex = i;
-              foundValidPath = true;
-              break;
-            }
+          if (!wouldCauseBackToBack(testRemaining, testLastPlayers)) {
+            bestIndex = i;
+            foundValidPath = true;
+            break;
           }
         }
       }
       
-      // If no valid path exists (back-to-back unavoidable), use greedy
+      // If still no valid path (back-to-back unavoidable), pick highest idle score
       if (!foundValidPath) {
-        let bestScore = -1;
-        for (let i = 0; i < remaining.length; i++) {
-          const [p1, p2] = remaining[i];
-          let score = 2;
-          if (lastPlayers.has(p1)) score--;
-          if (lastPlayers.has(p2)) score--;
-          if (score > bestScore) {
-            bestScore = score;
-            bestIndex = i;
-          }
+        const allMatches = [...nonBackToBack, ...backToBack];
+        allMatches.sort((a, b) => b.idleScore - a.idleScore);
+        if (allMatches.length > 0) {
+          bestIndex = allMatches[0].index;
         }
       }
     } else {
-      // Use greedy for larger remaining sets (performance)
-      let bestScore = -1;
+      // For larger remaining sets, use greedy with idle-time balancing
+      const nonBackToBack: Array<{ index: number; idleScore: number }> = [];
+      const backToBack: Array<{ index: number; idleScore: number }> = [];
+      
       for (let i = 0; i < remaining.length; i++) {
-        const [p1, p2] = remaining[i];
-        let score = 2;
-        if (lastPlayers.has(p1)) score--;
-        if (lastPlayers.has(p2)) score--;
-        if (score > bestScore) {
-          bestScore = score;
-          bestIndex = i;
+        const { isBackToBack, idleScore } = scoreMatch(remaining[i], lastPlayers, idleTime);
+        if (isBackToBack) {
+          backToBack.push({ index: i, idleScore });
+        } else {
+          nonBackToBack.push({ index: i, idleScore });
         }
+      }
+      
+      // Prefer non-back-to-back with highest idle score
+      if (nonBackToBack.length > 0) {
+        nonBackToBack.sort((a, b) => b.idleScore - a.idleScore);
+        bestIndex = nonBackToBack[0].index;
+      } else if (backToBack.length > 0) {
+        backToBack.sort((a, b) => b.idleScore - a.idleScore);
+        bestIndex = backToBack[0].index;
       }
     }
     
     const selected = remaining.splice(bestIndex, 1)[0];
     result.push(selected);
+    
+    // Update tracking
+    updateIdleTimes(idleTime, selected);
     lastPlayers = new Set([selected[0], selected[1]]);
   }
   
@@ -149,7 +222,7 @@ export function generateRoundSchedule(
   if (playerIds.length < 2) return [];
   
   const pairings = generateAllPairings(playerIds);
-  const optimizedPairings = optimizeMatchOrder(pairings);
+  const optimizedPairings = optimizeMatchOrder(pairings, undefined, playerIds);
   
   return optimizedPairings.map((pairing, index) => ({
     player1Id: pairing[0],
@@ -185,7 +258,7 @@ export function generateAdditionalRound(
     ? new Set([lastMatchPlayers.player1Id, lastMatchPlayers.player2Id])
     : undefined;
   
-  const optimizedPairings = optimizeMatchOrder(pairings, initialLastPlayers);
+  const optimizedPairings = optimizeMatchOrder(pairings, initialLastPlayers, playerIds);
   
   return optimizedPairings.map((pairing, index) => ({
     player1Id: pairing[0],
