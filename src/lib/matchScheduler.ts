@@ -27,8 +27,38 @@ function generateAllPairings(playerIds: string[]): Array<[string, string]> {
 }
 
 /**
+ * Check if remaining matches would cause back-to-back games
+ * Returns true if back-to-back is unavoidable
+ */
+function wouldCauseBackToBack(
+  remaining: Array<[string, string]>,
+  lastPlayers: Set<string>
+): boolean {
+  if (remaining.length === 0) return false;
+  
+  if (remaining.length === 1) {
+    const [p1, p2] = remaining[0];
+    return lastPlayers.has(p1) || lastPlayers.has(p2);
+  }
+  
+  // Try to find any valid path without back-to-back
+  for (let i = 0; i < remaining.length; i++) {
+    const [p1, p2] = remaining[i];
+    if (!lastPlayers.has(p1) && !lastPlayers.has(p2)) {
+      const newRemaining = remaining.filter((_, idx) => idx !== i);
+      const newLastPlayers = new Set([p1, p2]);
+      if (!wouldCauseBackToBack(newRemaining, newLastPlayers)) {
+        return false; // Found a valid path
+      }
+    }
+  }
+  
+  return true; // No valid path found
+}
+
+/**
  * Optimize match order to minimize consecutive games for same player
- * Uses a greedy algorithm that tracks last played player
+ * Uses a greedy algorithm with look-ahead to prevent back-to-back at the end
  * @param initialLastPlayers - Optional set of player IDs from the last match of the previous round
  */
 function optimizeMatchOrder(
@@ -39,13 +69,12 @@ function optimizeMatchOrder(
   
   const result: Array<[string, string]> = [];
   const remaining = [...pairings];
-  // Start with players from the last match of the previous round if provided
   let lastPlayers: Set<string> = initialLastPlayers || new Set();
   
   while (remaining.length > 0) {
-    // Find best next match (one where neither player just played)
-    let bestIndex = 0;
+    // Collect all candidates with their scores
     let bestScore = -1;
+    const candidates: number[] = [];
     
     for (let i = 0; i < remaining.length; i++) {
       const [p1, p2] = remaining[i];
@@ -55,11 +84,27 @@ function optimizeMatchOrder(
       
       if (score > bestScore) {
         bestScore = score;
-        bestIndex = i;
+        candidates.length = 0;
+        candidates.push(i);
+      } else if (score === bestScore) {
+        candidates.push(i);
       }
-      
-      // Perfect match found, no need to continue
-      if (score === 2) break;
+    }
+    
+    // Choose among candidates - use look-ahead when few matches remain
+    let bestIndex = candidates[0];
+    
+    if (candidates.length > 1 && remaining.length <= 4) {
+      // Simulate each choice and pick one that doesn't cause back-to-back
+      for (const idx of candidates) {
+        const testRemaining = remaining.filter((_, i) => i !== idx);
+        const testLastPlayers = new Set([remaining[idx][0], remaining[idx][1]]);
+        
+        if (!wouldCauseBackToBack(testRemaining, testLastPlayers)) {
+          bestIndex = idx;
+          break;
+        }
+      }
     }
     
     const selected = remaining.splice(bestIndex, 1)[0];
