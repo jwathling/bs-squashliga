@@ -145,10 +145,14 @@ const TournamentLive = () => {
       const wasCompleted = match.status === "completed";
       const previousWinnerId = match.winner_id;
 
-      // Calculate ELO changes
+      // Calculate ELO changes using tournament-based ELO (not global ELO)
+      // This ensures consistency: global ELO will always equal elo_at_start + elo_change
+      const p1CurrentTournamentElo = tp1.elo_at_start + tp1.elo_change;
+      const p2CurrentTournamentElo = tp2.elo_at_start + tp2.elo_change;
+      
       const eloChanges = calculateMatchEloChanges(
-        p1.elo,
-        p2.elo,
+        p1CurrentTournamentElo,
+        p2CurrentTournamentElo,
         player1Score,
         player2Score
       );
@@ -181,10 +185,12 @@ const TournamentLive = () => {
           p2Wins--;
         }
 
-        // Revert ELO (simplified - would need to track actual change)
+        // Revert ELO using tournament-based calculation for consistency
+        const p1PrevTournamentElo = tp1.elo_at_start + tp1.elo_change - (tp1.elo_change - p1EloChange);
+        const p2PrevTournamentElo = tp2.elo_at_start + tp2.elo_change - (tp2.elo_change - p2EloChange);
         const prevEloChanges = calculateMatchEloChanges(
-          p1.elo,
-          p2.elo,
+          p1PrevTournamentElo,
+          p2PrevTournamentElo,
           match.player1_score,
           match.player2_score
         );
@@ -239,10 +245,11 @@ const TournamentLive = () => {
       ]);
 
       // Update global player stats and ELO
+      // Use tournament-based ELO to ensure consistency: global ELO = elo_at_start + elo_change
       await Promise.all([
         updatePlayerStats.mutateAsync({
           id: match.player1_id,
-          elo: eloChanges.player1.newElo,
+          elo: tp1.elo_at_start + p1EloChange,
           total_games: wasCompleted ? p1.total_games : p1.total_games + 1,
           total_wins: winnerId === match.player1_id 
             ? (wasCompleted && previousWinnerId === match.player1_id ? p1.total_wins : p1.total_wins + 1)
@@ -250,7 +257,7 @@ const TournamentLive = () => {
         }),
         updatePlayerStats.mutateAsync({
           id: match.player2_id,
-          elo: eloChanges.player2.newElo,
+          elo: tp2.elo_at_start + p2EloChange,
           total_games: wasCompleted ? p2.total_games : p2.total_games + 1,
           total_wins: winnerId === match.player2_id 
             ? (wasCompleted && previousWinnerId === match.player2_id ? p2.total_wins : p2.total_wins + 1)
