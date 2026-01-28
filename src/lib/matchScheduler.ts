@@ -72,37 +72,59 @@ function optimizeMatchOrder(
   let lastPlayers: Set<string> = initialLastPlayers || new Set();
   
   while (remaining.length > 0) {
-    // Collect all candidates with their scores
-    let bestScore = -1;
-    const candidates: number[] = [];
+    let bestIndex = 0;
     
-    for (let i = 0; i < remaining.length; i++) {
-      const [p1, p2] = remaining[i];
-      let score = 2;
-      if (lastPlayers.has(p1)) score--;
-      if (lastPlayers.has(p2)) score--;
+    // When few matches remain, use exhaustive look-ahead
+    if (remaining.length <= 5) {
+      let foundValidPath = false;
       
-      if (score > bestScore) {
-        bestScore = score;
-        candidates.length = 0;
-        candidates.push(i);
-      } else if (score === bestScore) {
-        candidates.push(i);
+      // Try all matches in order of preference (score 2, then 1, then 0)
+      // and pick the first one that leads to a back-to-back-free sequence
+      for (let targetScore = 2; targetScore >= 0 && !foundValidPath; targetScore--) {
+        for (let i = 0; i < remaining.length; i++) {
+          const [p1, p2] = remaining[i];
+          let score = 2;
+          if (lastPlayers.has(p1)) score--;
+          if (lastPlayers.has(p2)) score--;
+          
+          if (score === targetScore) {
+            const testRemaining = remaining.filter((_, idx) => idx !== i);
+            const testLastPlayers = new Set([p1, p2]);
+            
+            if (!wouldCauseBackToBack(testRemaining, testLastPlayers)) {
+              bestIndex = i;
+              foundValidPath = true;
+              break;
+            }
+          }
+        }
       }
-    }
-    
-    // Choose among candidates - use look-ahead when few matches remain
-    let bestIndex = candidates[0];
-    
-    if (candidates.length > 1 && remaining.length <= 4) {
-      // Simulate each choice and pick one that doesn't cause back-to-back
-      for (const idx of candidates) {
-        const testRemaining = remaining.filter((_, i) => i !== idx);
-        const testLastPlayers = new Set([remaining[idx][0], remaining[idx][1]]);
-        
-        if (!wouldCauseBackToBack(testRemaining, testLastPlayers)) {
-          bestIndex = idx;
-          break;
+      
+      // If no valid path exists (back-to-back unavoidable), use greedy
+      if (!foundValidPath) {
+        let bestScore = -1;
+        for (let i = 0; i < remaining.length; i++) {
+          const [p1, p2] = remaining[i];
+          let score = 2;
+          if (lastPlayers.has(p1)) score--;
+          if (lastPlayers.has(p2)) score--;
+          if (score > bestScore) {
+            bestScore = score;
+            bestIndex = i;
+          }
+        }
+      }
+    } else {
+      // Use greedy for larger remaining sets (performance)
+      let bestScore = -1;
+      for (let i = 0; i < remaining.length; i++) {
+        const [p1, p2] = remaining[i];
+        let score = 2;
+        if (lastPlayers.has(p1)) score--;
+        if (lastPlayers.has(p2)) score--;
+        if (score > bestScore) {
+          bestScore = score;
+          bestIndex = i;
         }
       }
     }
