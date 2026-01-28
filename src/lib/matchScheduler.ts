@@ -75,7 +75,8 @@ function optimizeMatchOrder(
     let bestIndex = 0;
     
     // When few matches remain, use exhaustive look-ahead
-    if (remaining.length <= 5) {
+    // Use exhaustive look-ahead for small tournaments (up to 10 matches = 5 players)
+    if (remaining.length <= 10) {
       let foundValidPath = false;
       
       // Try all matches in order of preference (score 2, then 1, then 0)
