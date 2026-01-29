@@ -50,8 +50,8 @@ export function CreateTournamentForm({ onCancel }: CreateTournamentFormProps) {
       return;
     }
 
-    if (selectedPlayers.length < 3) {
-      toast.error("Mindestens 3 Spieler erforderlich");
+    if (selectedPlayers.length < 2) {
+      toast.error("Mindestens 2 Spieler erforderlich");
       return;
     }
 
@@ -153,7 +153,7 @@ export function CreateTournamentForm({ onCancel }: CreateTournamentFormProps) {
           <Button
             type="submit"
             className="flex-1"
-            disabled={createTournament.isPending || selectedPlayers.length < 3}
+            disabled={createTournament.isPending || selectedPlayers.length < 2}
           >
             {createTournament.isPending ? "Erstelle..." : "Letz Fetz"}
           </Button>
