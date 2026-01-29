@@ -56,19 +56,15 @@ export const EloChart = ({ tournaments, currentElo }: EloChartProps) => {
   const chartData = [
     {
       name: "Start",
-      shortName: "Start",
       elo: 1000,
       change: 0,
-      date: null,
+      date: "Start",
     },
     ...sortedTournaments.map((tp) => ({
       name: tp.tournament.name,
-      shortName: tp.tournament.name.length > 12 
-        ? tp.tournament.name.substring(0, 12) + "…" 
-        : tp.tournament.name,
       elo: tp.elo_at_start + tp.elo_change,
       change: tp.elo_change,
-      date: format(new Date(tp.tournament.created_at), "dd. MMM yyyy", { locale: de }),
+      date: format(new Date(tp.tournament.created_at), "dd.MM.yy", { locale: de }),
     })),
   ];
 
@@ -98,10 +94,10 @@ export const EloChart = ({ tournaments, currentElo }: EloChartProps) => {
               </linearGradient>
             </defs>
             <XAxis
-              dataKey="shortName"
+              dataKey="date"
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 12 }}
+              tick={{ fontSize: 11 }}
               tickMargin={8}
             />
             <YAxis
@@ -119,9 +115,6 @@ export const EloChart = ({ tournaments, currentElo }: EloChartProps) => {
                   formatter={(value, name, item) => (
                     <div className="flex flex-col gap-1">
                       <span className="font-medium">{item.payload.name}</span>
-                      {item.payload.date && (
-                        <span className="text-muted-foreground text-xs">{item.payload.date}</span>
-                      )}
                       <div className="flex items-center gap-2">
                         <span>ELO: {value}</span>
                         {item.payload.change !== 0 && (
