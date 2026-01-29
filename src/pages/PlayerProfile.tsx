@@ -10,6 +10,7 @@ import { OpponentStats } from "@/components/players/OpponentStats";
 import { usePlayer, useUpdatePlayer, useDeletePlayer } from "@/hooks/usePlayers";
 import { usePlayerTournaments } from "@/hooks/useTournaments";
 import { ArrowLeft, Edit2, Check, X, Trophy, Gamepad2, TrendingUp, Medal, Trash2 } from "lucide-react";
+import { EloChart } from "@/components/players/EloChart";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -169,6 +170,11 @@ const PlayerProfile = () => {
         <StatCard title="Spiele" value={player.total_games} icon={Gamepad2} />
         <StatCard title="Siege" value={player.total_wins} icon={Medal} />
         <StatCard title="Siegquote" value={`${winRate}%`} icon={Trophy} />
+      </div>
+
+      {/* ELO History Chart */}
+      <div className="mb-8">
+        <EloChart tournaments={tournaments} currentElo={player.elo} />
       </div>
 
       {/* Opponents */}
