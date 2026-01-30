@@ -7,24 +7,13 @@ import { Badge } from "@/components/ui/badge";
 import { Layout } from "@/components/layout/Layout";
 import { StatCard } from "@/components/ui/stat-card";
 import { OpponentStats } from "@/components/players/OpponentStats";
-import { usePlayer, useUpdatePlayer, useDeletePlayer } from "@/hooks/usePlayers";
+import { usePlayer, useUpdatePlayer } from "@/hooks/usePlayers";
 import { usePlayerTournaments } from "@/hooks/useTournaments";
-import { ArrowLeft, Edit2, Check, X, Trophy, Gamepad2, TrendingUp, Medal, Trash2 } from "lucide-react";
+import { ArrowLeft, Edit2, Check, X, Trophy, Gamepad2, TrendingUp, Medal } from "lucide-react";
 import { EloChart } from "@/components/players/EloChart";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 
 const PlayerProfile = () => {
   const { id } = useParams<{ id: string }>();
@@ -32,7 +21,7 @@ const PlayerProfile = () => {
   const { data: player, isLoading } = usePlayer(id);
   const { data: tournaments = [] } = usePlayerTournaments(id);
   const updatePlayer = useUpdatePlayer();
-  const deletePlayer = useDeletePlayer();
+  
 
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState("");
@@ -89,15 +78,6 @@ const PlayerProfile = () => {
     setEditName("");
   };
 
-  const handleDelete = async () => {
-    try {
-      await deletePlayer.mutateAsync(player.id);
-      toast.success("Spieler gelöscht");
-      navigate("/players");
-    } catch (error) {
-      toast.error("Fehler beim Löschen");
-    }
-  };
 
   // Sort tournaments by date (newest first)
   const sortedTournaments = [...tournaments].sort((a, b) => 
@@ -141,27 +121,6 @@ const PlayerProfile = () => {
             </div>
           )}
         </div>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Spieler löschen?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Diese Aktion kann nicht rückgängig gemacht werden. Alle Daten des Spielers werden gelöscht.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                Löschen
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </div>
 
       {/* Stats */}
