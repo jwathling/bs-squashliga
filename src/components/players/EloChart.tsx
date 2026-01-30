@@ -13,6 +13,7 @@ interface TournamentData {
     id: string;
     name: string;
     created_at: string;
+    scheduled_date: string;
   };
 }
 
@@ -47,9 +48,9 @@ export const EloChart = ({ tournaments, currentElo }: EloChartProps) => {
     );
   }
 
-  // Sort tournaments chronologically (oldest first)
+  // Sort tournaments chronologically (oldest first) by scheduled date
   const sortedTournaments = [...tournaments].sort(
-    (a, b) => new Date(a.tournament.created_at).getTime() - new Date(b.tournament.created_at).getTime()
+    (a, b) => new Date(a.tournament.scheduled_date).getTime() - new Date(b.tournament.scheduled_date).getTime()
   );
 
   // Build chart data with cumulative ELO
@@ -64,7 +65,7 @@ export const EloChart = ({ tournaments, currentElo }: EloChartProps) => {
       name: tp.tournament.name,
       elo: tp.elo_at_start + tp.elo_change,
       change: tp.elo_change,
-      date: format(new Date(tp.tournament.created_at), "dd.MM.yy", { locale: de }),
+      date: format(new Date(tp.tournament.scheduled_date), "dd.MM.yy", { locale: de }),
     })),
   ];
 
