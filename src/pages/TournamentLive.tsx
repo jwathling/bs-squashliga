@@ -446,31 +446,33 @@ const TournamentLive = () => {
             </>
           )}
           
-          <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="icon">
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Turnier löschen?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Dieses Turnier wird unwiderruflich gelöscht. Alle Spielerstatistiken 
-                  (ELO, Siege, Spiele, Turnieranzahl) werden auf den Stand vor dem Turnier zurückgesetzt.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleDeleteTournament}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
-                  {deleteTournament.isPending ? "Löschen..." : "Ja, löschen"}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          {!isCompleted && (
+            <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="icon">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Turnier löschen?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Dieses Turnier wird unwiderruflich gelöscht. Alle Spielerstatistiken 
+                    (ELO, Siege, Spiele, Turnieranzahl) werden auf den Stand vor dem Turnier zurückgesetzt.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDeleteTournament}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {deleteTournament.isPending ? "Löschen..." : "Ja, löschen"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
       </div>
 
