@@ -4,13 +4,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Users, Search } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Plus, Users, Search, CalendarIcon } from "lucide-react";
 import { usePlayers } from "@/hooks/usePlayers";
 import { useCreateTournament } from "@/hooks/useTournaments";
 import { generateRoundSchedule } from "@/lib/matchScheduler";
 import { CreatePlayerDialog } from "@/components/players/CreatePlayerDialog";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
+import { de } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 interface CreateTournamentFormProps {
   onCancel?: () => void;
@@ -21,6 +26,7 @@ export function CreateTournamentForm({ onCancel }: CreateTournamentFormProps) {
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [createPlayerOpen, setCreatePlayerOpen] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState<Date>(new Date());
 
   const { data: players = [], isLoading } = usePlayers();
   const createTournament = useCreateTournament();
@@ -61,6 +67,7 @@ export function CreateTournamentForm({ onCancel }: CreateTournamentFormProps) {
         name: name.trim(),
         playerIds: selectedPlayers,
         matches,
+        scheduledDate: format(scheduledDate, "yyyy-MM-dd"),
       });
 
       toast.success(`Turnier "${tournament.name}" erstellt!`);
@@ -81,6 +88,33 @@ export function CreateTournamentForm({ onCancel }: CreateTournamentFormProps) {
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Turnierdatum</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !scheduledDate && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {scheduledDate ? format(scheduledDate, "dd. MMMM yyyy", { locale: de }) : "Datum wählen"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={scheduledDate}
+                onSelect={(date) => date && setScheduledDate(date)}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
         </div>
 
         <Card>

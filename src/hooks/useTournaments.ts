@@ -8,6 +8,7 @@ export interface Tournament {
   current_round: number;
   created_at: string;
   completed_at: string | null;
+  scheduled_date: string;
 }
 
 export interface TournamentPlayer {
@@ -156,15 +157,17 @@ export function useCreateTournament() {
       name,
       playerIds,
       matches,
+      scheduledDate,
     }: {
       name: string;
       playerIds: string[];
       matches: Array<{ player1Id: string; player2Id: string; matchOrder: number; round: number }>;
+      scheduledDate: string;
     }) => {
       // Create tournament
       const { data: tournament, error: tournamentError } = await supabase
         .from("tournaments")
-        .insert({ name })
+        .insert({ name, scheduled_date: scheduledDate })
         .select()
         .single();
 
@@ -371,6 +374,34 @@ export function useCompleteTournament() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tournaments"] });
+    },
+  });
+}
+
+export function useUpdateTournamentDate() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      tournamentId,
+      scheduledDate,
+    }: {
+      tournamentId: string;
+      scheduledDate: string;
+    }) => {
+      const { data, error } = await supabase
+        .from("tournaments")
+        .update({ scheduled_date: scheduledDate })
+        .eq("id", tournamentId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Tournament;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["tournaments"] });
+      queryClient.invalidateQueries({ queryKey: ["tournaments", data.id] });
     },
   });
 }
