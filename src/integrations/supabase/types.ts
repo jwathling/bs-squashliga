@@ -179,6 +179,7 @@ export type Database = {
           current_round: number
           id: string
           name: string
+          scheduled_date: string
           status: string
         }
         Insert: {
@@ -187,6 +188,7 @@ export type Database = {
           current_round?: number
           id?: string
           name: string
+          scheduled_date?: string
           status?: string
         }
         Update: {
@@ -195,6 +197,7 @@ export type Database = {
           current_round?: number
           id?: string
           name?: string
+          scheduled_date?: string
           status?: string
         }
         Relationships: []

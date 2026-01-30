@@ -7,7 +7,9 @@ import { PlayerCard } from "@/components/players/PlayerCard";
 import { TournamentCard } from "@/components/tournaments/TournamentCard";
 import { usePlayers } from "@/hooks/usePlayers";
 import { useTournaments, useTournamentPlayers } from "@/hooks/useTournaments";
-import { Plus, Trophy, Users, Gamepad2, TrendingUp, ArrowRight } from "lucide-react";
+import { Plus, Trophy, Users, Gamepad2, TrendingUp, ArrowRight, CalendarDays } from "lucide-react";
+import { format, isToday, isFuture, parseISO, startOfDay } from "date-fns";
+import { de } from "date-fns/locale";
 import logo from "@/assets/logo.png";
 const Index = () => {
   const {
@@ -27,7 +29,16 @@ const Index = () => {
 
   // Calculate stats
   const totalGames = players.reduce((sum, p) => sum + p.total_games, 0) / 2; // Divide by 2 since each game involves 2 players
-  
+
+  // Find next upcoming tournament (today or future, active status)
+  const today = startOfDay(new Date());
+  const nextTournament = tournaments
+    .filter(t => t.status === "active" && t.scheduled_date)
+    .filter(t => {
+      const scheduledDate = startOfDay(parseISO(t.scheduled_date));
+      return scheduledDate >= today;
+    })
+    .sort((a, b) => parseISO(a.scheduled_date).getTime() - parseISO(b.scheduled_date).getTime())[0];
   return <Layout>
       {/* Hero Section */}
       <section className="relative py-8 md:py-16 mb-8">
@@ -57,6 +68,38 @@ const Index = () => {
           </div>
         </div>
       </section>
+
+      {/* Next Tournament Banner */}
+      {nextTournament && (
+        <section className="mb-8">
+          <Card className="shadow-card border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                    <CalendarDays className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Nächstes Turnier</p>
+                    <h3 className="text-lg font-semibold text-foreground">{nextTournament.name}</h3>
+                    <p className="text-sm text-primary font-medium">
+                      {isToday(parseISO(nextTournament.scheduled_date)) 
+                        ? "Heute" 
+                        : format(parseISO(nextTournament.scheduled_date), "EEEE, dd. MMMM yyyy", { locale: de })}
+                    </p>
+                  </div>
+                </div>
+                <Link to={`/tournaments/${nextTournament.id}`}>
+                  <Button>
+                    Zum Turnier
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+      )}
 
       {/* Stats Section */}
       <section className="grid grid-cols-3 gap-4 mb-8">
@@ -134,11 +177,12 @@ function TournamentCardWithPlayers({
     status: "active" | "completed";
     created_at: string;
     completed_at: string | null;
+    scheduled_date: string;
   };
 }) {
   const {
     data: players = []
   } = useTournamentPlayers(tournament.id);
-  return <TournamentCard id={tournament.id} name={tournament.name} status={tournament.status} playerCount={players.length} createdAt={tournament.created_at} completedAt={tournament.completed_at} />;
+  return <TournamentCard id={tournament.id} name={tournament.name} status={tournament.status} playerCount={players.length} createdAt={tournament.created_at} completedAt={tournament.completed_at} scheduledDate={tournament.scheduled_date} />;
 }
 export default Index;

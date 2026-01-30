@@ -12,10 +12,12 @@ interface TournamentCardProps {
   playerCount: number;
   createdAt: string;
   completedAt?: string | null;
+  scheduledDate?: string | null;
 }
 
-export function TournamentCard({ id, name, status, playerCount, createdAt, completedAt }: TournamentCardProps) {
-  const dateToShow = status === "completed" && completedAt ? completedAt : createdAt;
+export function TournamentCard({ id, name, status, playerCount, createdAt, completedAt, scheduledDate }: TournamentCardProps) {
+  // Priority: scheduledDate > completedAt (for completed) > createdAt
+  const dateToShow = scheduledDate || (status === "completed" && completedAt ? completedAt : createdAt);
   
   return (
     <Link to={`/tournaments/${id}`}>

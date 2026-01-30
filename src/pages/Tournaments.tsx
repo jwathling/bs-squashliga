@@ -99,6 +99,7 @@ interface TournamentListProps {
     status: "active" | "completed";
     created_at: string;
     completed_at: string | null;
+    scheduled_date: string;
   }>;
   isLoading: boolean;
   emptyMessage: string;
@@ -135,7 +136,7 @@ function TournamentList({ tournaments, isLoading, emptyMessage, emptyAction }: T
   );
 }
 
-function TournamentCardWithPlayers({ tournament }: { tournament: { id: string; name: string; status: "active" | "completed"; created_at: string; completed_at: string | null } }) {
+function TournamentCardWithPlayers({ tournament }: { tournament: { id: string; name: string; status: "active" | "completed"; created_at: string; completed_at: string | null; scheduled_date: string } }) {
   const { data: players = [] } = useTournamentPlayers(tournament.id);
   
   return (
@@ -146,6 +147,7 @@ function TournamentCardWithPlayers({ tournament }: { tournament: { id: string; n
       playerCount={players.length}
       createdAt={tournament.created_at}
       completedAt={tournament.completed_at}
+      scheduledDate={tournament.scheduled_date}
     />
   );
 }

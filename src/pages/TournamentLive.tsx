@@ -3,6 +3,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,15 +28,19 @@ import {
   useCompleteTournament,
   useAddRound,
   useDeleteTournament,
+  useUpdateTournamentDate,
 } from "@/hooks/useTournaments";
 import { useUpdatePlayerStats, usePlayers } from "@/hooks/usePlayers";
 import { calculateMatchEloChanges } from "@/lib/elo";
 import { generateAdditionalRound, calculateTotalMatches } from "@/lib/matchScheduler";
-import { ArrowLeft, Trophy, Plus, CheckCircle, Trash2 } from "lucide-react";
+import { ArrowLeft, Trophy, Plus, CheckCircle, Trash2, CalendarIcon, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { format, parseISO } from "date-fns";
+import { de } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 const TournamentLive = () => {
   const { id } = useParams<{ id: string }>();
@@ -42,6 +48,7 @@ const TournamentLive = () => {
   const queryClient = useQueryClient();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
+  const [datePopoverOpen, setDatePopoverOpen] = useState(false);
   
   const { data: tournament, isLoading: tournamentLoading } = useTournament(id);
   const { data: tournamentPlayers = [], isLoading: playersLoading } = useTournamentPlayers(id);
@@ -54,6 +61,7 @@ const TournamentLive = () => {
   const completeTournament = useCompleteTournament();
   const addRound = useAddRound();
   const deleteTournament = useDeleteTournament();
+  const updateTournamentDate = useUpdateTournamentDate();
 
   // Set up realtime subscription
   useEffect(() => {
@@ -329,6 +337,20 @@ const TournamentLive = () => {
     }
   };
 
+  const handleDateChange = async (date: Date | undefined) => {
+    if (!date || !id) return;
+    try {
+      await updateTournamentDate.mutateAsync({
+        tournamentId: id,
+        scheduledDate: format(date, "yyyy-MM-dd"),
+      });
+      setDatePopoverOpen(false);
+      toast.success("Turnierdatum geändert!");
+    } catch (error) {
+      toast.error("Fehler beim Ändern des Datums");
+    }
+  };
+
   return (
     <Layout>
       {/* Header */}
@@ -349,9 +371,33 @@ const TournamentLive = () => {
                 {isCompleted ? "Beendet" : "Live"}
               </Badge>
             </div>
-            <p className="text-muted-foreground">
-              {completedMatches}/{totalMatches} Spiele • Runde {tournament.current_round}
-            </p>
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <CalendarIcon className="h-3 w-3" />
+              <span>{tournament.scheduled_date ? format(parseISO(tournament.scheduled_date), "dd. MMMM yyyy", { locale: de }) : "Kein Datum"}</span>
+              {!isCompleted && (
+                <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
+                      <Pencil className="h-3 w-3 mr-1" />
+                      Ändern
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={tournament.scheduled_date ? parseISO(tournament.scheduled_date) : undefined}
+                      onSelect={handleDateChange}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+              )}
+              <span className="mx-1">•</span>
+              <span>{completedMatches}/{totalMatches} Spiele</span>
+              <span className="mx-1">•</span>
+              <span>Runde {tournament.current_round}</span>
+            </div>
           </div>
         </div>
         
