@@ -19,6 +19,7 @@ import {
 import { Layout } from "@/components/layout/Layout";
 import { LiveTable } from "@/components/tournaments/LiveTable";
 import { MatchCard } from "@/components/tournaments/MatchCard";
+import { TournamentEditForm } from "@/components/tournaments/TournamentEditForm";
 import {
   useTournament,
   useTournamentPlayers,
@@ -115,7 +116,9 @@ const TournamentLive = () => {
     );
   }
 
+  const isPlanned = tournament.status === "planned";
   const isCompleted = tournament.status === "completed";
+  const isActive = tournament.status === "active";
   const completedMatches = matches.filter((m) => m.status === "completed").length;
   const totalMatches = matches.length;
   const allMatchesPlayed = completedMatches === totalMatches && totalMatches > 0;
@@ -365,16 +368,16 @@ const TournamentLive = () => {
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold text-foreground">{tournament.name}</h1>
               <Badge 
-                variant={isCompleted ? "secondary" : "default"}
-                className={!isCompleted ? "bg-success text-success-foreground" : ""}
+                variant={isCompleted ? "secondary" : isPlanned ? "outline" : "default"}
+                className={isActive ? "bg-success text-success-foreground" : isPlanned ? "border-primary text-primary" : ""}
               >
-                {isCompleted ? "Beendet" : "Live"}
+                {isCompleted ? "Beendet" : isPlanned ? "Geplant" : "Live"}
               </Badge>
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <CalendarIcon className="h-3 w-3" />
               <span>{tournament.scheduled_date ? format(parseISO(tournament.scheduled_date), "dd. MMMM yyyy", { locale: de }) : "Kein Datum"}</span>
-              {!isCompleted && (
+              {isActive && (
                 <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
@@ -393,16 +396,20 @@ const TournamentLive = () => {
                   </PopoverContent>
                 </Popover>
               )}
-              <span className="mx-1">•</span>
-              <span>{completedMatches}/{totalMatches} Spiele</span>
-              <span className="mx-1">•</span>
-              <span>Runde {tournament.current_round}</span>
+              {!isPlanned && (
+                <>
+                  <span className="mx-1">•</span>
+                  <span>{completedMatches}/{totalMatches} Spiele</span>
+                  <span className="mx-1">•</span>
+                  <span>Runde {tournament.current_round}</span>
+                </>
+              )}
             </div>
           </div>
         </div>
         
         <div className="flex gap-2">
-          {!isCompleted && (
+          {isActive && (
             <>
               <Button variant="outline" onClick={handleAddRound} disabled={addRound.isPending}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -446,7 +453,7 @@ const TournamentLive = () => {
             </>
           )}
           
-          {!isCompleted && (
+          {(isActive || isPlanned) && (
             <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" size="icon">
@@ -457,8 +464,10 @@ const TournamentLive = () => {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Turnier löschen?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Dieses Turnier wird unwiderruflich gelöscht. Alle Spielerstatistiken 
-                    (ELO, Siege, Spiele, Turnieranzahl) werden auf den Stand vor dem Turnier zurückgesetzt.
+                    {isPlanned 
+                      ? "Dieses geplante Turnier wird unwiderruflich gelöscht."
+                      : "Dieses Turnier wird unwiderruflich gelöscht. Alle Spielerstatistiken (ELO, Siege, Spiele, Turnieranzahl) werden auf den Stand vor dem Turnier zurückgesetzt."
+                    }
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -476,43 +485,65 @@ const TournamentLive = () => {
         </div>
       </div>
 
-      {/* Live Table */}
-      <Card className="shadow-card mb-8">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-primary" />
-            Live-Tabelle
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <LiveTable players={tournamentPlayers} />
-        </CardContent>
-      </Card>
+      {/* Planned Tournament: Show Edit Form */}
+      {isPlanned && (
+        <Card className="shadow-card">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg">Turnier bearbeiten</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TournamentEditForm
+              tournamentId={tournament.id}
+              tournamentName={tournament.name}
+              scheduledDate={tournament.scheduled_date}
+              tournamentPlayers={tournamentPlayers}
+            />
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Matches by Round */}
-      {Object.entries(matchesByRound)
-        .sort(([a], [b]) => Number(a) - Number(b))
-        .map(([round, roundMatches]) => (
-          <Card key={round} className="shadow-card mb-6">
+      {/* Active/Completed Tournament: Show Table and Matches */}
+      {!isPlanned && (
+        <>
+          {/* Live Table */}
+          <Card className="shadow-card mb-8">
             <CardHeader className="pb-4">
-              <CardTitle className="text-lg">Runde {round}</CardTitle>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Trophy className="h-5 w-5 text-primary" />
+                Live-Tabelle
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {roundMatches
-                  .sort((a, b) => a.match_order - b.match_order)
-                  .map((match) => (
-                    <MatchCard
-                      key={match.id}
-                      match={match}
-                      onScoreSubmit={handleScoreSubmit}
-                      disabled={isCompleted}
-                    />
-                  ))}
-              </div>
+              <LiveTable players={tournamentPlayers} />
             </CardContent>
           </Card>
-        ))}
+
+          {/* Matches by Round */}
+          {Object.entries(matchesByRound)
+            .sort(([a], [b]) => Number(a) - Number(b))
+            .map(([round, roundMatches]) => (
+              <Card key={round} className="shadow-card mb-6">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg">Runde {round}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {roundMatches
+                      .sort((a, b) => a.match_order - b.match_order)
+                      .map((match) => (
+                        <MatchCard
+                          key={match.id}
+                          match={match}
+                          onScoreSubmit={handleScoreSubmit}
+                          disabled={isCompleted}
+                        />
+                      ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+        </>
+      )}
     </Layout>
   );
 };

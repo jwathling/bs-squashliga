@@ -30,10 +30,10 @@ const Index = () => {
   // Calculate stats
   const totalGames = players.reduce((sum, p) => sum + p.total_games, 0) / 2; // Divide by 2 since each game involves 2 players
 
-  // Find next upcoming tournament (today or future, active status)
+  // Find next upcoming tournament (today or future, planned or active status)
   const today = startOfDay(new Date());
   const nextTournament = tournaments
-    .filter(t => t.status === "active" && t.scheduled_date)
+    .filter(t => (t.status === "planned" || t.status === "active") && t.scheduled_date)
     .filter(t => {
       const scheduledDate = startOfDay(parseISO(t.scheduled_date));
       return scheduledDate >= today;
@@ -174,7 +174,7 @@ function TournamentCardWithPlayers({
   tournament: {
     id: string;
     name: string;
-    status: "active" | "completed";
+    status: "planned" | "active" | "completed";
     created_at: string;
     completed_at: string | null;
     scheduled_date: string;

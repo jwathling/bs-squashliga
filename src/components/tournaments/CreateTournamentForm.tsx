@@ -9,7 +9,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Plus, Users, Search, CalendarIcon } from "lucide-react";
 import { usePlayers } from "@/hooks/usePlayers";
 import { useCreateTournament } from "@/hooks/useTournaments";
-import { generateRoundSchedule } from "@/lib/matchScheduler";
 import { CreatePlayerDialog } from "@/components/players/CreatePlayerDialog";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -62,15 +61,13 @@ export function CreateTournamentForm({ onCancel }: CreateTournamentFormProps) {
     }
 
     try {
-      const matches = generateRoundSchedule(selectedPlayers, 1);
       const tournament = await createTournament.mutateAsync({
         name: name.trim(),
         playerIds: selectedPlayers,
-        matches,
         scheduledDate: format(scheduledDate, "yyyy-MM-dd"),
       });
 
-      toast.success(`Turnier "${tournament.name}" erstellt!`);
+      toast.success(`Turnier "${tournament.name}" geplant!`);
       navigate(`/tournaments/${tournament.id}`);
     } catch (error) {
       toast.error("Fehler beim Erstellen des Turniers");
@@ -189,7 +186,7 @@ export function CreateTournamentForm({ onCancel }: CreateTournamentFormProps) {
             className="flex-1"
             disabled={createTournament.isPending || selectedPlayers.length < 2}
           >
-            {createTournament.isPending ? "Erstelle..." : "Letz Fetz"}
+            {createTournament.isPending ? "Erstelle..." : "Turnier planen"}
           </Button>
         </div>
       </form>

@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 export interface Tournament {
   id: string;
   name: string;
-  status: "active" | "completed";
+  status: "planned" | "active" | "completed";
   current_round: number;
   created_at: string;
   completed_at: string | null;
@@ -156,18 +156,16 @@ export function useCreateTournament() {
     mutationFn: async ({
       name,
       playerIds,
-      matches,
       scheduledDate,
     }: {
       name: string;
       playerIds: string[];
-      matches: Array<{ player1Id: string; player2Id: string; matchOrder: number; round: number }>;
       scheduledDate: string;
     }) => {
-      // Create tournament
+      // Create tournament with status 'planned' (no matches yet)
       const { data: tournament, error: tournamentError } = await supabase
         .from("tournaments")
-        .insert({ name, scheduled_date: scheduledDate })
+        .insert({ name, scheduled_date: scheduledDate, status: "planned" })
         .select()
         .single();
 
@@ -176,7 +174,7 @@ export function useCreateTournament() {
       // Get players to store their current ELO
       const { data: players, error: playersError } = await supabase
         .from("players")
-        .select("id, elo, total_tournaments")
+        .select("id, elo")
         .in("id", playerIds);
 
       if (playersError) throw playersError;
@@ -197,17 +195,119 @@ export function useCreateTournament() {
 
       if (tpError) throw tpError;
 
-      // Update total_tournaments for each player
-      for (const player of players) {
-        await supabase
-          .from("players")
-          .update({ total_tournaments: (player.total_tournaments || 0) + 1 })
-          .eq("id", player.id);
+      // Note: No matches created, no total_tournaments increment
+      // These happen when tournament is started
+
+      return tournament as Tournament;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tournaments"] });
+    },
+  });
+}
+
+export function useUpdateTournamentName() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      tournamentId,
+      name,
+    }: {
+      tournamentId: string;
+      name: string;
+    }) => {
+      const { data, error } = await supabase
+        .from("tournaments")
+        .update({ name })
+        .eq("id", tournamentId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Tournament;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["tournaments"] });
+      queryClient.invalidateQueries({ queryKey: ["tournaments", data.id] });
+    },
+  });
+}
+
+export function useUpdateTournamentPlayers() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      tournamentId,
+      playerIds,
+    }: {
+      tournamentId: string;
+      playerIds: string[];
+    }) => {
+      // Delete all existing tournament_players
+      const { error: deleteError } = await supabase
+        .from("tournament_players")
+        .delete()
+        .eq("tournament_id", tournamentId);
+
+      if (deleteError) throw deleteError;
+
+      // Get players to store their current ELO
+      const { data: players, error: playersError } = await supabase
+        .from("players")
+        .select("id, elo")
+        .in("id", playerIds);
+
+      if (playersError) throw playersError;
+
+      // Add new tournament_players
+      const tournamentPlayers = playerIds.map((playerId) => {
+        const player = players.find((p) => p.id === playerId);
+        return {
+          tournament_id: tournamentId,
+          player_id: playerId,
+          elo_at_start: player?.elo || 1000,
+        };
+      });
+
+      const { error: insertError } = await supabase
+        .from("tournament_players")
+        .insert(tournamentPlayers);
+
+      if (insertError) throw insertError;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["tournament_players", variables.tournamentId] });
+    },
+  });
+}
+
+export function useStartTournament() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (tournamentId: string) => {
+      // 1. Get all tournament players
+      const { data: tournamentPlayers, error: tpError } = await supabase
+        .from("tournament_players")
+        .select("player_id")
+        .eq("tournament_id", tournamentId);
+
+      if (tpError) throw tpError;
+      if (!tournamentPlayers || tournamentPlayers.length < 2) {
+        throw new Error("Mindestens 2 Spieler erforderlich");
       }
 
-      // Create matches
+      const playerIds = tournamentPlayers.map((tp) => tp.player_id);
+
+      // 2. Generate round-robin matches (imported from matchScheduler)
+      const { generateRoundSchedule } = await import("@/lib/matchScheduler");
+      const matches = generateRoundSchedule(playerIds, 1);
+
+      // 3. Create matches
       const matchesData = matches.map((m) => ({
-        tournament_id: tournament.id,
+        tournament_id: tournamentId,
         player1_id: m.player1Id,
         player2_id: m.player2Id,
         match_order: m.matchOrder,
@@ -220,10 +320,37 @@ export function useCreateTournament() {
 
       if (matchesError) throw matchesError;
 
+      // 4. Increment total_tournaments for each player
+      const { data: players, error: playersError } = await supabase
+        .from("players")
+        .select("id, total_tournaments")
+        .in("id", playerIds);
+
+      if (playersError) throw playersError;
+
+      for (const player of players) {
+        await supabase
+          .from("players")
+          .update({ total_tournaments: (player.total_tournaments || 0) + 1 })
+          .eq("id", player.id);
+      }
+
+      // 5. Set status to 'active'
+      const { data: tournament, error: updateError } = await supabase
+        .from("tournaments")
+        .update({ status: "active" })
+        .eq("id", tournamentId)
+        .select()
+        .single();
+
+      if (updateError) throw updateError;
+
       return tournament as Tournament;
     },
-    onSuccess: () => {
+    onSuccess: (_, tournamentId) => {
       queryClient.invalidateQueries({ queryKey: ["tournaments"] });
+      queryClient.invalidateQueries({ queryKey: ["tournaments", tournamentId] });
+      queryClient.invalidateQueries({ queryKey: ["matches", tournamentId] });
       queryClient.invalidateQueries({ queryKey: ["players"] });
     },
   });

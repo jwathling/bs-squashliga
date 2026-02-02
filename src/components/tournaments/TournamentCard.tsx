@@ -8,7 +8,7 @@ import { de } from "date-fns/locale";
 interface TournamentCardProps {
   id: string;
   name: string;
-  status: "active" | "completed";
+  status: "planned" | "active" | "completed";
   playerCount: number;
   createdAt: string;
   completedAt?: string | null;
@@ -30,10 +30,10 @@ export function TournamentCard({ id, name, status, playerCount, createdAt, compl
                   {name}
                 </h3>
                 <Badge 
-                  variant={status === "active" ? "default" : "secondary"}
-                  className={status === "active" ? "bg-success text-success-foreground" : ""}
+                  variant={status === "completed" ? "secondary" : status === "planned" ? "outline" : "default"}
+                  className={status === "active" ? "bg-success text-success-foreground" : status === "planned" ? "border-primary text-primary" : ""}
                 >
-                  {status === "active" ? "Aktiv" : "Beendet"}
+                  {status === "active" ? "Aktiv" : status === "planned" ? "Geplant" : "Beendet"}
                 </Badge>
               </div>
               <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
