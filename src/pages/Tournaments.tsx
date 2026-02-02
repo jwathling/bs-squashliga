@@ -13,6 +13,7 @@ const TournamentsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const { data: tournaments = [], isLoading } = useTournaments();
 
+  const plannedTournaments = tournaments.filter(t => t.status === "planned");
   const activeTournaments = tournaments.filter(t => t.status === "active");
   const completedTournaments = tournaments.filter(t => t.status === "completed");
 
@@ -54,8 +55,11 @@ const TournamentsPage = () => {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="active" className="w-full">
+      <Tabs defaultValue="planned" className="w-full">
         <TabsList className="w-full mb-6">
+          <TabsTrigger value="planned" className="flex-1">
+            Geplant ({plannedTournaments.length})
+          </TabsTrigger>
           <TabsTrigger value="active" className="flex-1">
             Aktiv ({activeTournaments.length})
           </TabsTrigger>
@@ -64,19 +68,27 @@ const TournamentsPage = () => {
           </TabsTrigger>
         </TabsList>
 
+        <TabsContent value="planned">
+          <TournamentList
+            tournaments={filterTournaments(plannedTournaments)}
+            isLoading={isLoading}
+            emptyMessage="Keine geplanten Turniere"
+            emptyAction={
+              <Link to="/tournaments/new">
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Turnier planen
+                </Button>
+              </Link>
+            }
+          />
+        </TabsContent>
+
         <TabsContent value="active">
           <TournamentList
             tournaments={filterTournaments(activeTournaments)}
             isLoading={isLoading}
             emptyMessage="Keine aktiven Turniere"
-            emptyAction={
-              <Link to="/tournaments/new">
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Turnier erstellen
-                </Button>
-              </Link>
-            }
           />
         </TabsContent>
 
@@ -96,7 +108,7 @@ interface TournamentListProps {
   tournaments: Array<{
     id: string;
     name: string;
-    status: "active" | "completed";
+    status: "planned" | "active" | "completed";
     created_at: string;
     completed_at: string | null;
     scheduled_date: string;
@@ -136,7 +148,7 @@ function TournamentList({ tournaments, isLoading, emptyMessage, emptyAction }: T
   );
 }
 
-function TournamentCardWithPlayers({ tournament }: { tournament: { id: string; name: string; status: "active" | "completed"; created_at: string; completed_at: string | null; scheduled_date: string } }) {
+function TournamentCardWithPlayers({ tournament }: { tournament: { id: string; name: string; status: "planned" | "active" | "completed"; created_at: string; completed_at: string | null; scheduled_date: string } }) {
   const { data: players = [] } = useTournamentPlayers(tournament.id);
   
   return (
