@@ -1,108 +1,115 @@
 
-# Turnier-Bearbeitung vor dem Start
+
+# Turnier-Badges (Auszeichnungen) - Aktualisierter Plan
 
 ## Zusammenfassung
-Einführung eines "Geplant"-Status für Turniere, bei dem Name, Datum und Teilnehmer noch frei bearbeitbar sind. Erst beim expliziten Starten werden die Matches generiert.
+Beim Beenden eines Turniers werden automatisch Badges berechnet und gespeichert. Badges koennen an mehrere Spieler gleichzeitig vergeben werden, wenn sie den gleichen Bestwert teilen.
 
-## Vorteile dieses Ansatzes
+## Badge-Liste
 
-| Aspekt | Vorteil |
-|--------|---------|
-| Flexibilität | Teilnehmer können bis zum Turnierstart beliebig geändert werden |
-| Einfachheit | Keine komplizierte Match-Neugenerierung nötig |
-| Klarheit | Drei klare Status: Geplant -> Aktiv -> Beendet |
+| Badge | Icon | Farbe | Berechnung | Mehrfach moeglich? |
+|-------|------|-------|------------|-------------------|
+| Turniersieg | Trophy | Gold | Platz 1 (Siege, dann Punktedifferenz) | Ja, bei Gleichstand |
+| Hoechster Sieg | Zap | Blau | Groesste Punktedifferenz in einem Match | Ja |
+| ELO-Rakete | TrendingUp | Gruen | Bester elo_change | Ja |
+| Punktemaschine | Target | Orange | Meiste points_for | Ja |
+| Mauer | Shield | Silber | Wenigste points_against (min. 1 Spiel) | Ja |
+| Arsch der Schande | Skull | Rot | Letzter Platz in der Tabelle | Ja, bei Gleichstand |
 
-## Geplante Änderungen
+## Geplante Aenderungen
 
-### 1. Datenbank-Änderung
-- Neuer Status-Wert `planned` für Turniere hinzufügen (neben `active` und `completed`)
-- Bestehende Logik bleibt unberührt
+### 1. Neue Datenbank-Tabelle: `player_badges`
+- `id` (uuid, PK)
+- `player_id` (uuid, FK -> players)
+- `tournament_id` (uuid, FK -> tournaments)
+- `badge_type` (text) - z.B. "tournament_winner", "highest_win"
+- `badge_label` (text) - Anzeigename, z.B. "Hoechster Sieg"
+- `badge_value` (text) - Detail, z.B. "11:3 vs Max"
+- `created_at` (timestamptz)
 
-### 2. Neue Hooks in `useTournaments.ts`
-- `useUpdateTournamentName`: Turniername ändern
-- `useUpdateTournamentPlayers`: Spieler hinzufügen/entfernen (nur bei Status "planned")
-- `useStartTournament`: Matches generieren und Status auf "active" setzen
+Ein Badge-Typ kann pro Turnier mehrere Eintraege haben (ein Eintrag pro Spieler).
 
-### 3. Neue Seite: Turnier-Bearbeitungsseite
-Eine separate Bearbeitungsseite (oder Dialog) für geplante Turniere mit:
-- Textfeld für Turniernamen
-- Kalender für Datum (bereits vorhanden)
-- Spieler-Auswahl mit Checkboxen (ähnlich wie bei Turniererstellung)
-- "Turnier starten" Button
+### 2. Badge-Berechnung: `src/lib/badges.ts`
 
-### 4. Anpassung CreateTournamentForm
-- Status `planned` statt `active` bei Erstellung
-- Keine Matches bei Erstellung generieren
-- Keine `total_tournaments` Erhöhung bei Erstellung
-
-### 5. Anpassung TournamentLive.tsx
-- Unterscheidung zwischen "geplant" und "aktiv"
-- Bei geplanten Turnieren: Bearbeitungs-UI statt Match-Ansicht
-- "Turnier starten" Button für geplante Turniere
-
-### 6. UI-Anpassungen
-- Badge-Farben: Geplant (blau/outline), Aktiv (grün), Beendet (grau)
-- Tabs in Turnierübersicht: Geplant, Aktiv, Beendet
-
-## Ablauf
+Kernprinzip: Fuer jeden Badge-Typ den Bestwert ermitteln, dann **alle** Spieler mit diesem Wert sammeln.
 
 ```text
-+------------------+     +-----------------+     +------------------+
-|  Turnier planen  | --> | Turnier starten | --> | Turnier beenden  |
-+------------------+     +-----------------+     +------------------+
-        |                        |                       |
-   Status: planned          Status: active         Status: completed
-   - Name bearbeitbar       - Matches generiert    - Alles gesperrt
-   - Datum bearbeitbar      - Scores eintragen     - Nur Ansicht
-   - Spieler bearbeitbar    - Runden hinzufügen
-   - Keine Matches
+Beispiel "Hoechster Sieg":
+  Match A: Spieler 1 gewinnt 11:3 (Diff = 8)
+  Match B: Spieler 2 gewinnt 11:3 (Diff = 8)
+  Match C: Spieler 3 gewinnt 11:5 (Diff = 6)
+  -> Badge geht an Spieler 1 UND Spieler 2
 ```
 
----
+Fuer jeden Badge-Typ:
+- **Turniersieg**: Alle Spieler auf Platz 1 (gleiche Siege + gleiche Punktedifferenz)
+- **Hoechster Sieg**: Alle Gewinner von Matches mit der hoechsten Punktedifferenz
+- **ELO-Rakete**: Alle Spieler mit dem hoechsten elo_change
+- **Punktemaschine**: Alle Spieler mit den meisten points_for
+- **Mauer**: Alle Spieler mit den wenigsten points_against
+- **Arsch der Schande**: Alle Spieler auf dem letzten Platz
+
+### 3. Hooks: `src/hooks/useBadges.ts`
+- `usePlayerBadges(playerId)` - Alle Badges eines Spielers (mit Turniername per Join)
+- `useTournamentBadges(tournamentId)` - Alle Badges eines Turniers
+- `useAwardBadges()` - Mutation zum Speichern (Array von Badges)
+
+### 4. UI-Komponenten
+- `src/components/badges/BadgeDisplay.tsx` - Einzelner Badge mit Icon, Farbe, Label, Wert
+- `src/components/badges/BadgeGrid.tsx` - Grid-Layout fuer mehrere Badges
+
+### 5. Aenderung: `src/pages/TournamentLive.tsx`
+- `handleCompleteTournament`: Nach dem Beenden Badges berechnen und speichern
+- Bei abgeschlossenen Turnieren: Badge-Bereich unter der Live-Tabelle mit allen vergebenen Badges
+
+### 6. Aenderung: `src/pages/PlayerProfile.tsx`
+- Neuer Abschnitt "Auszeichnungen" mit gesammelten Badges, gruppiert nach Turnier
 
 ## Technische Details
 
-### Neue TypeScript-Typen
-```typescript
-// Status erweitert
-type TournamentStatus = "planned" | "active" | "completed";
+### Badge-Berechnung (Pseudocode)
+```text
+function calculateTournamentBadges(matches, tournamentPlayers, allPlayers):
+  badges = []
+
+  // Tabelle sortieren (wie LiveTable)
+  sorted = sortByWinsThenPointDiff(tournamentPlayers)
+  
+  // Turniersieg: alle mit gleichen Werten wie Platz 1
+  topWins = sorted[0].wins
+  topDiff = sorted[0].points_for - sorted[0].points_against
+  winners = sorted.filter(p => p.wins == topWins && diff(p) == topDiff)
+  -> badges fuer alle winners
+
+  // Arsch der Schande: alle mit gleichen Werten wie letzter Platz
+  lastWins = sorted[last].wins
+  lastDiff = diff(sorted[last])
+  losers = sorted.filter(p => p.wins == lastWins && diff(p) == lastDiff)
+  -> badges fuer alle losers
+
+  // Hoechster Sieg: groesste Differenz ueber alle Matches
+  completedMatches = matches.filter(completed)
+  maxDiff = max(|score1 - score2|)
+  matchesWithMaxDiff = completedMatches.filter(diff == maxDiff)
+  -> badges fuer alle Gewinner dieser Matches
+
+  // ELO-Rakete, Punktemaschine, Mauer: analog
+  maxElo = max(elo_change) -> alle mit diesem Wert
+  maxPoints = max(points_for) -> alle mit diesem Wert
+  minAgainst = min(points_against) -> alle mit diesem Wert (games_played > 0)
+
+  return badges
 ```
 
-### Neue Mutation: useStartTournament
-```typescript
-export function useStartTournament() {
-  return useMutation({
-    mutationFn: async (tournamentId: string) => {
-      // 1. Hole alle Turnier-Spieler
-      // 2. Generiere Round-Robin Matches
-      // 3. Erhöhe total_tournaments für jeden Spieler
-      // 4. Setze Status auf "active"
-    }
-  });
-}
-```
+### Dateien-Uebersicht
 
-### Neue Mutation: useUpdateTournamentPlayers
-```typescript
-export function useUpdateTournamentPlayers() {
-  return useMutation({
-    mutationFn: async ({ 
-      tournamentId, 
-      playerIds 
-    }: { 
-      tournamentId: string; 
-      playerIds: string[] 
-    }) => {
-      // 1. Lösche alle bestehenden tournament_players
-      // 2. Füge neue tournament_players hinzu
-      // Nur bei status === "planned" erlaubt
-    }
-  });
-}
-```
+| Datei | Aktion |
+|-------|--------|
+| `supabase/migrations/...` | Neue Tabelle `player_badges` |
+| `src/lib/badges.ts` | Badge-Berechnungslogik (mit Mehrfachvergabe) |
+| `src/hooks/useBadges.ts` | Hooks fuer Badges |
+| `src/components/badges/BadgeDisplay.tsx` | Badge-Anzeige-Komponente |
+| `src/components/badges/BadgeGrid.tsx` | Badge-Grid |
+| `src/pages/TournamentLive.tsx` | Badge-Vergabe + Anzeige |
+| `src/pages/PlayerProfile.tsx` | Auszeichnungen-Bereich |
 
-### Bearbeitungs-Komponente
-Eine neue Komponente `TournamentEditForm` mit:
-- Ähnlichem Layout wie `CreateTournamentForm`
-- Vorausgefüllten Werten
-- Speichern einzelner Felder oder gesamtes Formular
