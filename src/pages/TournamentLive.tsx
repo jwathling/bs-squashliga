@@ -530,7 +530,7 @@ const TournamentLive = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <LiveTable players={tournamentPlayers} />
+              <LiveTable players={tournamentPlayers} badges={isCompleted ? tournamentBadges : []} />
             </CardContent>
           </Card>
 
