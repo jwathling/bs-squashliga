@@ -34,7 +34,10 @@ import {
 import { useUpdatePlayerStats, usePlayers } from "@/hooks/usePlayers";
 import { calculateMatchEloChanges } from "@/lib/elo";
 import { generateAdditionalRound, calculateTotalMatches } from "@/lib/matchScheduler";
-import { ArrowLeft, Trophy, Plus, CheckCircle, Trash2, CalendarIcon, Pencil } from "lucide-react";
+import { calculateTournamentBadges } from "@/lib/badges";
+import { useAwardBadges, useTournamentBadges } from "@/hooks/useBadges";
+import { BadgeGrid } from "@/components/badges/BadgeGrid";
+import { ArrowLeft, Trophy, Plus, CheckCircle, Trash2, CalendarIcon, Pencil, Award } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -63,6 +66,8 @@ const TournamentLive = () => {
   const addRound = useAddRound();
   const deleteTournament = useDeleteTournament();
   const updateTournamentDate = useUpdateTournamentDate();
+  const awardBadges = useAwardBadges();
+  const { data: tournamentBadges = [] } = useTournamentBadges(id);
 
   // Set up realtime subscription
   useEffect(() => {
@@ -318,6 +323,16 @@ const TournamentLive = () => {
   const handleCompleteTournament = async () => {
     try {
       await completeTournament.mutateAsync(tournament.id);
+
+      // Calculate and award badges
+      const playerNames: Record<string, string> = {};
+      for (const tp of tournamentPlayers) {
+        const player = allPlayers.find((p) => p.id === tp.player_id);
+        if (player) playerNames[player.id] = player.name;
+      }
+      const calculatedBadges = calculateTournamentBadges(matches, tournamentPlayers, playerNames);
+      await awardBadges.mutateAsync({ tournamentId: tournament.id, badges: calculatedBadges });
+
       setShowCompleteDialog(false);
       toast.success(
         allMatchesPlayed
@@ -325,6 +340,7 @@ const TournamentLive = () => {
           : `Turnier vorzeitig beendet! ${completedMatches} von ${totalMatches} Spielen gewertet.`
       );
     } catch (error) {
+      console.error("Error completing tournament:", error);
       toast.error("Fehler beim Beenden");
     }
   };
@@ -517,6 +533,27 @@ const TournamentLive = () => {
               <LiveTable players={tournamentPlayers} />
             </CardContent>
           </Card>
+
+          {/* Badges for completed tournaments */}
+          {isCompleted && tournamentBadges.length > 0 && (
+            <Card className="shadow-card mb-8">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Award className="h-5 w-5 text-accent" />
+                  Auszeichnungen
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <BadgeGrid
+                  badges={tournamentBadges}
+                  playerNames={Object.fromEntries(
+                    allPlayers.map((p) => [p.id, p.name])
+                  )}
+                  showPlayerName
+                />
+              </CardContent>
+            </Card>
+          )}
 
           {/* Matches by Round */}
           {Object.entries(matchesByRound)

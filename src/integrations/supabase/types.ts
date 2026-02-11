@@ -88,6 +88,51 @@ export type Database = {
           },
         ]
       }
+      player_badges: {
+        Row: {
+          badge_label: string
+          badge_type: string
+          badge_value: string | null
+          created_at: string
+          id: string
+          player_id: string
+          tournament_id: string
+        }
+        Insert: {
+          badge_label: string
+          badge_type: string
+          badge_value?: string | null
+          created_at?: string
+          id?: string
+          player_id: string
+          tournament_id: string
+        }
+        Update: {
+          badge_label?: string
+          badge_type?: string
+          badge_value?: string | null
+          created_at?: string
+          id?: string
+          player_id?: string
+          tournament_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_badges_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_badges_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       players: {
         Row: {
           created_at: string
