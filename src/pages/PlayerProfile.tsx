@@ -12,7 +12,7 @@ import { usePlayerTournaments } from "@/hooks/useTournaments";
 import { ArrowLeft, Edit2, Check, X, Trophy, Gamepad2, TrendingUp, Medal } from "lucide-react";
 import { EloChart } from "@/components/players/EloChart";
 import { usePlayerBadges } from "@/hooks/useBadges";
-import { BadgeGrid } from "@/components/badges/BadgeGrid";
+import { BadgeSummary } from "@/components/badges/BadgeSummary";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -144,7 +144,7 @@ const PlayerProfile = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <BadgeGrid badges={playerBadges} showTournamentName />
+            <BadgeSummary badges={playerBadges} showTournamentName />
           </CardContent>
         </Card>
       )}
