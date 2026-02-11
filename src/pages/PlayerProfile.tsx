@@ -11,6 +11,8 @@ import { usePlayer, useUpdatePlayer } from "@/hooks/usePlayers";
 import { usePlayerTournaments } from "@/hooks/useTournaments";
 import { ArrowLeft, Edit2, Check, X, Trophy, Gamepad2, TrendingUp, Medal } from "lucide-react";
 import { EloChart } from "@/components/players/EloChart";
+import { usePlayerBadges } from "@/hooks/useBadges";
+import { BadgeGrid } from "@/components/badges/BadgeGrid";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -20,6 +22,7 @@ const PlayerProfile = () => {
   const navigate = useNavigate();
   const { data: player, isLoading } = usePlayer(id);
   const { data: tournaments = [] } = usePlayerTournaments(id);
+  const { data: playerBadges = [] } = usePlayerBadges(id);
   const updatePlayer = useUpdatePlayer();
   
 
@@ -130,6 +133,21 @@ const PlayerProfile = () => {
         <StatCard title="Siege" value={player.total_wins} icon={Medal} />
         <StatCard title="Siegquote" value={`${winRate}%`} icon={Trophy} />
       </div>
+
+      {/* Badges / Auszeichnungen */}
+      {playerBadges.length > 0 && (
+        <Card className="shadow-card mb-8">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Medal className="h-5 w-5 text-accent" />
+              Auszeichnungen
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <BadgeGrid badges={playerBadges} showTournamentName />
+          </CardContent>
+        </Card>
+      )}
 
       {/* ELO History Chart */}
       <div className="mb-8">
