@@ -7,13 +7,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Layout } from "@/components/layout/Layout";
 import { TournamentCard } from "@/components/tournaments/TournamentCard";
 import { useTournaments, useTournamentPlayers } from "@/hooks/useTournaments";
-import { useBackfillBadges } from "@/hooks/useBackfillBadges";
-import { Plus, Search, Trophy, ArrowLeft, Award } from "lucide-react";
+import { Plus, Search, Trophy, ArrowLeft } from "lucide-react";
 
 const TournamentsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const { data: tournaments = [], isLoading } = useTournaments();
-  const { backfill, isRunning } = useBackfillBadges();
+  
 
   const plannedTournaments = tournaments.filter(t => t.status === "planned");
   const activeTournaments = tournaments.filter(t => t.status === "active");
@@ -38,12 +37,6 @@ const TournamentsPage = () => {
           </div>
         </div>
         <div className="flex gap-2">
-          {completedTournaments.length > 0 && (
-            <Button variant="outline" onClick={backfill} disabled={isRunning}>
-              <Award className="h-4 w-4 mr-2" />
-              {isRunning ? "Läuft..." : "Badges nachtragen"}
-            </Button>
-          )}
           <Link to="/tournaments/new">
             <Button>
               <Plus className="h-4 w-4 mr-2" />

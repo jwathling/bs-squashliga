@@ -134,6 +134,11 @@ const PlayerProfile = () => {
         <StatCard title="Siegquote" value={`${winRate}%`} icon={Trophy} />
       </div>
 
+      {/* ELO History Chart */}
+      <div className="mb-8">
+        <EloChart tournaments={tournaments} currentElo={player.elo} />
+      </div>
+
       {/* Badges / Auszeichnungen */}
       {playerBadges.length > 0 && (
         <Card className="shadow-card mb-8">
@@ -148,11 +153,6 @@ const PlayerProfile = () => {
           </CardContent>
         </Card>
       )}
-
-      {/* ELO History Chart */}
-      <div className="mb-8">
-        <EloChart tournaments={tournaments} currentElo={player.elo} />
-      </div>
 
       {/* Opponents */}
       <div className="mb-8">
