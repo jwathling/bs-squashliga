@@ -1,115 +1,66 @@
 
 
-# Turnier-Badges (Auszeichnungen) - Aktualisierter Plan
+# Inaktive Spieler in der Rangliste
 
 ## Zusammenfassung
-Beim Beenden eines Turniers werden automatisch Badges berechnet und gespeichert. Badges koennen an mehrere Spieler gleichzeitig vergeben werden, wenn sie den gleichen Bestwert teilen.
+Spieler, die an keinem der letzten 5 abgeschlossenen Turniere teilgenommen haben, werden als "Inaktiv" markiert und standardmaessig aus der Rangliste ausgeblendet. Ein Toggle erlaubt es, sie wieder einzublenden.
 
-## Badge-Liste
+## Funktionsweise
 
-| Badge | Icon | Farbe | Berechnung | Mehrfach moeglich? |
-|-------|------|-------|------------|-------------------|
-| Turniersieg | Trophy | Gold | Platz 1 (Siege, dann Punktedifferenz) | Ja, bei Gleichstand |
-| Hoechster Sieg | Zap | Blau | Groesste Punktedifferenz in einem Match | Ja |
-| ELO-Rakete | TrendingUp | Gruen | Bester elo_change | Ja |
-| Punktemaschine | Target | Orange | Meiste points_for | Ja |
-| Mauer | Shield | Silber | Wenigste points_against (min. 1 Spiel) | Ja |
-| Arsch der Schande | Skull | Rot | Letzter Platz in der Tabelle | Ja, bei Gleichstand |
+Die Inaktivitaet wird rein clientseitig berechnet -- keine Datenbank-Aenderungen noetig:
+
+1. Die letzten 5 abgeschlossenen Turniere ermitteln (sortiert nach `completed_at`)
+2. Fuer jedes Turnier die Teilnehmer aus `tournament_players` laden
+3. Ein Spieler ist **aktiv**, wenn seine `player_id` in mindestens einem dieser 5 Turniere vorkommt
+4. Alle anderen Spieler sind **inaktiv**
 
 ## Geplante Aenderungen
 
-### 1. Neue Datenbank-Tabelle: `player_badges`
-- `id` (uuid, PK)
-- `player_id` (uuid, FK -> players)
-- `tournament_id` (uuid, FK -> tournaments)
-- `badge_type` (text) - z.B. "tournament_winner", "highest_win"
-- `badge_label` (text) - Anzeigename, z.B. "Hoechster Sieg"
-- `badge_value` (text) - Detail, z.B. "11:3 vs Max"
-- `created_at` (timestamptz)
+### 1. Neuer Hook: `src/hooks/useInactivePlayers.ts`
+- Laedt die letzten 5 abgeschlossenen Turniere und deren Teilnehmer
+- Gibt ein `Set<string>` mit den IDs inaktiver Spieler zurueck
+- Wiederverwendbar auf der Spieler-Seite und der Startseite
 
-Ein Badge-Typ kann pro Turnier mehrere Eintraege haben (ein Eintrag pro Spieler).
+### 2. Aenderung: `src/pages/Players.tsx`
+- Neuer State `showInactive` (default: `false`)
+- Toggle-Button/Switch neben der Suchleiste: "Inaktive anzeigen"
+- Filtert inaktive Spieler aus, wenn `showInactive === false`
+- Ranking-Nummern basieren nur auf den sichtbaren (aktiven) Spielern
+- Anzeige im Header: z.B. "12 Spieler registriert (3 inaktiv)"
 
-### 2. Badge-Berechnung: `src/lib/badges.ts`
+### 3. Aenderung: `src/components/players/PlayerCard.tsx`
+- Neue optionale Prop `inactive?: boolean`
+- Wenn inaktiv: Badge "Inaktiv" neben dem Namen, leicht abgedunkelte Darstellung (opacity)
 
-Kernprinzip: Fuer jeden Badge-Typ den Bestwert ermitteln, dann **alle** Spieler mit diesem Wert sammeln.
-
-```text
-Beispiel "Hoechster Sieg":
-  Match A: Spieler 1 gewinnt 11:3 (Diff = 8)
-  Match B: Spieler 2 gewinnt 11:3 (Diff = 8)
-  Match C: Spieler 3 gewinnt 11:5 (Diff = 6)
-  -> Badge geht an Spieler 1 UND Spieler 2
-```
-
-Fuer jeden Badge-Typ:
-- **Turniersieg**: Alle Spieler auf Platz 1 (gleiche Siege + gleiche Punktedifferenz)
-- **Hoechster Sieg**: Alle Gewinner von Matches mit der hoechsten Punktedifferenz
-- **ELO-Rakete**: Alle Spieler mit dem hoechsten elo_change
-- **Punktemaschine**: Alle Spieler mit den meisten points_for
-- **Mauer**: Alle Spieler mit den wenigsten points_against
-- **Arsch der Schande**: Alle Spieler auf dem letzten Platz
-
-### 3. Hooks: `src/hooks/useBadges.ts`
-- `usePlayerBadges(playerId)` - Alle Badges eines Spielers (mit Turniername per Join)
-- `useTournamentBadges(tournamentId)` - Alle Badges eines Turniers
-- `useAwardBadges()` - Mutation zum Speichern (Array von Badges)
-
-### 4. UI-Komponenten
-- `src/components/badges/BadgeDisplay.tsx` - Einzelner Badge mit Icon, Farbe, Label, Wert
-- `src/components/badges/BadgeGrid.tsx` - Grid-Layout fuer mehrere Badges
-
-### 5. Aenderung: `src/pages/TournamentLive.tsx`
-- `handleCompleteTournament`: Nach dem Beenden Badges berechnen und speichern
-- Bei abgeschlossenen Turnieren: Badge-Bereich unter der Live-Tabelle mit allen vergebenen Badges
-
-### 6. Aenderung: `src/pages/PlayerProfile.tsx`
-- Neuer Abschnitt "Auszeichnungen" mit gesammelten Badges, gruppiert nach Turnier
+### 4. Aenderung: `src/pages/Index.tsx` (Top Spieler)
+- Top-Spieler-Liste auf der Startseite zeigt nur aktive Spieler
 
 ## Technische Details
 
-### Badge-Berechnung (Pseudocode)
+### Hook-Logik (Pseudocode)
 ```text
-function calculateTournamentBadges(matches, tournamentPlayers, allPlayers):
-  badges = []
-
-  // Tabelle sortieren (wie LiveTable)
-  sorted = sortByWinsThenPointDiff(tournamentPlayers)
+function useInactivePlayers(allPlayers):
+  // 1. Lade letzte 5 completed tournaments
+  tournaments = query("tournaments", status=completed, order by completed_at desc, limit 5)
   
-  // Turniersieg: alle mit gleichen Werten wie Platz 1
-  topWins = sorted[0].wins
-  topDiff = sorted[0].points_for - sorted[0].points_against
-  winners = sorted.filter(p => p.wins == topWins && diff(p) == topDiff)
-  -> badges fuer alle winners
-
-  // Arsch der Schande: alle mit gleichen Werten wie letzter Platz
-  lastWins = sorted[last].wins
-  lastDiff = diff(sorted[last])
-  losers = sorted.filter(p => p.wins == lastWins && diff(p) == lastDiff)
-  -> badges fuer alle losers
-
-  // Hoechster Sieg: groesste Differenz ueber alle Matches
-  completedMatches = matches.filter(completed)
-  maxDiff = max(|score1 - score2|)
-  matchesWithMaxDiff = completedMatches.filter(diff == maxDiff)
-  -> badges fuer alle Gewinner dieser Matches
-
-  // ELO-Rakete, Punktemaschine, Mauer: analog
-  maxElo = max(elo_change) -> alle mit diesem Wert
-  maxPoints = max(points_for) -> alle mit diesem Wert
-  minAgainst = min(points_against) -> alle mit diesem Wert (games_played > 0)
-
-  return badges
+  // 2. Lade alle tournament_players fuer diese Turniere
+  participantIds = query("tournament_players", tournament_id in tournamentIds).map(tp => tp.player_id)
+  
+  // 3. Set aus aktiven Spielern
+  activeSet = new Set(participantIds)
+  
+  // 4. Inaktive = alle Spieler deren ID nicht in activeSet
+  inactiveSet = allPlayers.filter(p => !activeSet.has(p.id))
+  
+  return { inactivePlayerIds: inactiveSet }
 ```
 
 ### Dateien-Uebersicht
 
 | Datei | Aktion |
 |-------|--------|
-| `supabase/migrations/...` | Neue Tabelle `player_badges` |
-| `src/lib/badges.ts` | Badge-Berechnungslogik (mit Mehrfachvergabe) |
-| `src/hooks/useBadges.ts` | Hooks fuer Badges |
-| `src/components/badges/BadgeDisplay.tsx` | Badge-Anzeige-Komponente |
-| `src/components/badges/BadgeGrid.tsx` | Badge-Grid |
-| `src/pages/TournamentLive.tsx` | Badge-Vergabe + Anzeige |
-| `src/pages/PlayerProfile.tsx` | Auszeichnungen-Bereich |
+| `src/hooks/useInactivePlayers.ts` | Neuer Hook |
+| `src/pages/Players.tsx` | Toggle + Filter-Logik |
+| `src/components/players/PlayerCard.tsx` | Inaktiv-Badge + Styling |
+| `src/pages/Index.tsx` | Top-Spieler nur aktive |
 
