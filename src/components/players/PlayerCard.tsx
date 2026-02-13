@@ -11,14 +11,15 @@ interface PlayerCardProps {
   wins: number;
   games: number;
   showRank?: boolean;
+  inactive?: boolean;
 }
 
-export function PlayerCard({ id, name, elo, rank, wins, games, showRank = false }: PlayerCardProps) {
+export function PlayerCard({ id, name, elo, rank, wins, games, showRank = false, inactive = false }: PlayerCardProps) {
   const winRate = games > 0 ? Math.round((wins / games) * 100) : 0;
   
   return (
     <Link to={`/players/${id}`}>
-      <Card className="shadow-card hover:shadow-button transition-all duration-300 cursor-pointer group">
+      <Card className={`shadow-card hover:shadow-button transition-all duration-300 cursor-pointer group ${inactive ? "opacity-60" : ""}`}>
         <CardContent className="p-4">
           <div className="flex items-center gap-4">
             {showRank && rank && (
@@ -45,6 +46,11 @@ export function PlayerCard({ id, name, elo, rank, wins, games, showRank = false 
                 <h3 className="font-semibold text-foreground truncate group-hover:text-primary transition-colors">
                   {name}
                 </h3>
+                {inactive && (
+                  <Badge variant="outline" className="text-xs text-muted-foreground border-muted-foreground/40">
+                    Inaktiv
+                  </Badge>
+                )}
                 <Badge variant="secondary" className="font-mono text-xs">
                   {elo}
                 </Badge>
