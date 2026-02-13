@@ -6,17 +6,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Layout } from "@/components/layout/Layout";
 import { PlayerCard } from "@/components/players/PlayerCard";
 import { CreatePlayerDialog } from "@/components/players/CreatePlayerDialog";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { usePlayers } from "@/hooks/usePlayers";
+import { useInactivePlayers } from "@/hooks/useInactivePlayers";
 import { Plus, Search, Users, ArrowLeft } from "lucide-react";
 
 const PlayersPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [showInactive, setShowInactive] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const { data: players = [], isLoading } = usePlayers();
+  const { data: inactiveIds = new Set<string>() } = useInactivePlayers();
 
-  const filteredPlayers = players.filter((p) =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const inactiveCount = players.filter((p) => inactiveIds.has(p.id)).length;
+
+  const filteredPlayers = players
+    .filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .filter((p) => showInactive || !inactiveIds.has(p.id));
 
   return (
     <Layout>
@@ -30,7 +37,9 @@ const PlayersPage = () => {
           </Link>
           <div>
             <h1 className="text-2xl font-bold text-foreground">Spieler</h1>
-            <p className="text-muted-foreground">{players.length} Spieler registriert</p>
+            <p className="text-muted-foreground">
+              {players.length} Spieler registriert{inactiveCount > 0 && ` (${inactiveCount} inaktiv)`}
+            </p>
           </div>
         </div>
         <Button onClick={() => setCreateDialogOpen(true)}>
@@ -39,15 +48,27 @@ const PlayersPage = () => {
         </Button>
       </div>
 
-      {/* Search */}
-      <div className="relative mb-6">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Spieler suchen..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
+      {/* Search + Filter */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Spieler suchen..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Switch
+            id="show-inactive"
+            checked={showInactive}
+            onCheckedChange={setShowInactive}
+          />
+          <Label htmlFor="show-inactive" className="text-sm text-muted-foreground whitespace-nowrap">
+            Inaktive anzeigen
+          </Label>
+        </div>
       </div>
 
       {/* Player List */}
@@ -87,6 +108,7 @@ const PlayersPage = () => {
               wins={player.total_wins}
               games={player.total_games}
               showRank
+              inactive={inactiveIds.has(player.id)}
             />
           ))}
         </div>

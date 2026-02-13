@@ -7,6 +7,7 @@ import { PlayerCard } from "@/components/players/PlayerCard";
 import { TournamentCard } from "@/components/tournaments/TournamentCard";
 import { usePlayers } from "@/hooks/usePlayers";
 import { useTournaments, useTournamentPlayers } from "@/hooks/useTournaments";
+import { useInactivePlayers } from "@/hooks/useInactivePlayers";
 import { Plus, Trophy, Users, Gamepad2, TrendingUp, ArrowRight, CalendarDays } from "lucide-react";
 import { format, isToday, isFuture, parseISO, startOfDay } from "date-fns";
 import { de } from "date-fns/locale";
@@ -20,12 +21,16 @@ const Index = () => {
     data: tournaments = [],
     isLoading: tournamentsLoading
   } = useTournaments();
+  const { data: inactiveIds = new Set<string>() } = useInactivePlayers();
 
   // Get recent tournaments (max 3)
   const recentTournaments = tournaments.slice(0, 3);
 
-  // Get top players by ELO (max 5)
-  const topPlayers = [...players].sort((a, b) => b.elo - a.elo).slice(0, 5);
+  // Get top players by ELO (max 5) - only active players
+  const topPlayers = [...players]
+    .filter((p) => !inactiveIds.has(p.id))
+    .sort((a, b) => b.elo - a.elo)
+    .slice(0, 5);
 
   // Calculate stats
   const totalGames = players.reduce((sum, p) => sum + p.total_games, 0) / 2; // Divide by 2 since each game involves 2 players
