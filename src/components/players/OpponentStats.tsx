@@ -107,8 +107,8 @@ function HeadToHeadDetail({
           <StatBar
             leftValue={opponent.playerPoints}
             rightValue={opponent.opponentPoints}
-            leftLabel={`${opponent.playerPoints}`}
-            rightLabel={`${opponent.opponentPoints}`}
+            leftLabel={playerName}
+            rightLabel={opponent.opponentName}
           />
         </div>
       </div>
