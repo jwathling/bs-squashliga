@@ -46,7 +46,7 @@ export function LiveTable({ players, badges = [] }: LiveTableProps) {
             <TableHead className="text-center w-20">Siege</TableHead>
             <TableHead className="text-center w-20">Pkt. +</TableHead>
             <TableHead className="text-center w-20">Pkt. -</TableHead>
-            <TableHead className="text-center w-24">Diff.</TableHead>
+            <TableHead className="text-center w-20">Diff.</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
