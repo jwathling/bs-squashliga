@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { TournamentPlayer } from "@/hooks/useTournaments";
+import { TournamentPlayer, Match } from "@/hooks/useTournaments";
 import { cn } from "@/lib/utils";
 import { Trophy, Zap, TrendingUp, Target, Shield, Skull } from "lucide-react";
 import { BADGE_DEFINITIONS, type BadgeType } from "@/lib/badges";
@@ -11,6 +12,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { PlayerTournamentDialog } from "./PlayerTournamentDialog";
 
 const badgeIconMap = {
   Trophy,
@@ -24,9 +26,11 @@ const badgeIconMap = {
 interface LiveTableProps {
   players: TournamentPlayer[];
   badges?: PlayerBadge[];
+  matches?: Match[];
 }
 
-export function LiveTable({ players, badges = [] }: LiveTableProps) {
+export function LiveTable({ players, badges = [], matches = [] }: LiveTableProps) {
+  const [selectedPlayer, setSelectedPlayer] = useState<TournamentPlayer | null>(null);
   // Sort by wins (desc), then by point difference (desc)
   const sortedPlayers = [...players].sort((a, b) => {
     if (b.wins !== a.wins) return b.wins - a.wins;
@@ -58,10 +62,12 @@ export function LiveTable({ players, badges = [] }: LiveTableProps) {
               <TableRow 
                 key={tp.id}
                 className={cn(
+                  "cursor-pointer hover:bg-muted/50 transition-colors",
                   index === 0 && "bg-warning/10",
                   index === 1 && "bg-muted/30",
                   index === 2 && "bg-warning/5"
                 )}
+                onClick={() => setSelectedPlayer(tp)}
               >
                 <TableCell className="text-center font-bold">
                   {index === 0 && "🥇"}
@@ -130,6 +136,12 @@ export function LiveTable({ players, badges = [] }: LiveTableProps) {
           })}
         </TableBody>
       </Table>
+      <PlayerTournamentDialog
+        open={!!selectedPlayer}
+        onOpenChange={(open) => !open && setSelectedPlayer(null)}
+        player={selectedPlayer}
+        matches={matches}
+      />
     </div>
   );
 }
