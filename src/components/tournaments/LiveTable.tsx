@@ -44,6 +44,8 @@ export function LiveTable({ players, badges = [] }: LiveTableProps) {
             <TableHead>Spieler (ELO)</TableHead>
             <TableHead className="text-center w-20">Spiele</TableHead>
             <TableHead className="text-center w-20">Siege</TableHead>
+            <TableHead className="text-center w-20">Pkt. +</TableHead>
+            <TableHead className="text-center w-20">Pkt. -</TableHead>
             <TableHead className="text-center w-24">Diff.</TableHead>
           </TableRow>
         </TableHeader>
@@ -112,6 +114,8 @@ export function LiveTable({ players, badges = [] }: LiveTableProps) {
                 </TableCell>
                 <TableCell className="text-center">{tp.games_played}</TableCell>
                 <TableCell className="text-center font-semibold">{tp.wins}</TableCell>
+                <TableCell className="text-center">{tp.points_for}</TableCell>
+                <TableCell className="text-center">{tp.points_against}</TableCell>
                 <TableCell className="text-center">
                   <span className={cn(
                     "font-mono",
