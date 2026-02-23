@@ -393,7 +393,7 @@ const TournamentLive = () => {
             <div className="flex items-center gap-2 text-muted-foreground">
               <CalendarIcon className="h-3 w-3" />
               <span>{tournament.scheduled_date ? format(parseISO(tournament.scheduled_date), "dd. MMMM yyyy", { locale: de }) : "Kein Datum"}</span>
-              {isActive && (
+              {(isActive || isPlanned) && (
                 <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
@@ -501,21 +501,14 @@ const TournamentLive = () => {
         </div>
       </div>
 
-      {/* Planned Tournament: Show Edit Form */}
+      {/* Planned Tournament */}
       {isPlanned && (
-        <Card className="shadow-card">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg">Turnier bearbeiten</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <TournamentEditForm
-              tournamentId={tournament.id}
-              tournamentName={tournament.name}
-              scheduledDate={tournament.scheduled_date}
-              tournamentPlayers={tournamentPlayers}
-            />
-          </CardContent>
-        </Card>
+        <TournamentEditForm
+          tournamentId={tournament.id}
+          tournamentName={tournament.name}
+          scheduledDate={tournament.scheduled_date}
+          tournamentPlayers={tournamentPlayers}
+        />
       )}
 
       {/* Active/Completed Tournament: Show Table and Matches */}
