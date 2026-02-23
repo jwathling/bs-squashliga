@@ -14,6 +14,20 @@ export interface ScheduledMatch {
 }
 
 /**
+ * Optimal 3-player schedule template
+ * With 3 players, one back-to-back per round is unavoidable.
+ * This order ensures max 2 consecutive games (including cross-round transitions
+ * when the same template is reused).
+ * Pattern: A-B, C-A, B-C → only A plays back-to-back (games 1&2)
+ * Cross-round: ends with B-C, next round starts with A-B → B back-to-back (max 2)
+ */
+const THREE_PLAYER_TEMPLATE: Array<[number, number]> = [
+  [0, 1], // A-B
+  [2, 0], // C-A
+  [1, 2], // B-C
+];
+
+/**
  * Optimal 6-player schedule template (indices into sorted player array)
  * This pattern ensures balanced wait times (max 4 matches gap) and no back-to-back
  */
@@ -252,8 +266,10 @@ export function generateRoundSchedule(
   
   let optimizedPairings: Array<[string, string]>;
   
-  // Use optimal template for 6 players
-  if (playerIds.length === 6) {
+  // Use optimal templates for known player counts
+  if (playerIds.length === 3) {
+    optimizedPairings = THREE_PLAYER_TEMPLATE.map(([i, j]) => [playerIds[i], playerIds[j]]);
+  } else if (playerIds.length === 6) {
     optimizedPairings = generate6PlayerPairings(playerIds);
   } else {
     const pairings = generateAllPairings(playerIds);
@@ -289,8 +305,10 @@ export function generateAdditionalRound(
   
   let optimizedPairings: Array<[string, string]>;
   
-  // Use optimal template for 6 players
-  if (playerIds.length === 6) {
+  // Use optimal templates for known player counts
+  if (playerIds.length === 3) {
+    optimizedPairings = THREE_PLAYER_TEMPLATE.map(([i, j]) => [playerIds[i], playerIds[j]]);
+  } else if (playerIds.length === 6) {
     optimizedPairings = generate6PlayerPairings(playerIds);
   } else {
     const pairings = generateAllPairings(playerIds);
