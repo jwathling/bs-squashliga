@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Users, Search, CalendarIcon, Play, Save, Plus } from "lucide-react";
+import { MatchSchedulePreview } from "@/components/tournaments/MatchSchedulePreview";
 import { usePlayers } from "@/hooks/usePlayers";
 import {
   useUpdateTournamentName,
@@ -275,6 +276,12 @@ export function TournamentEditForm({
             )}
           </CardContent>
         </Card>
+
+        {/* Match Schedule Preview */}
+        <MatchSchedulePreview
+          selectedPlayerIds={selectedPlayers}
+          allPlayers={allPlayers}
+        />
 
         {/* Start Tournament Button */}
         <Button
