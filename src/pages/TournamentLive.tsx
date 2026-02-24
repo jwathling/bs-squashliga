@@ -383,6 +383,18 @@ const TournamentLive = () => {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold text-foreground">{tournament.name}</h1>
+              {isPlanned && (
+                <button
+                  onClick={() => {
+                    // Scroll to edit form name and trigger edit - we'll use a custom event
+                    document.dispatchEvent(new CustomEvent('edit-tournament-name'));
+                  }}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  title="Namen ändern"
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+              )}
               <Badge 
                 variant={isCompleted ? "secondary" : isPlanned ? "outline" : "default"}
                 className={isActive ? "bg-success text-success-foreground" : isPlanned ? "border-primary text-primary" : ""}
