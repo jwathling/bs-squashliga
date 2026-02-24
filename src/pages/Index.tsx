@@ -23,8 +23,10 @@ const Index = () => {
   } = useTournaments();
   const { data: inactiveIds = new Set<string>() } = useInactivePlayers();
 
-  // Get recent tournaments (max 3)
-  const recentTournaments = tournaments.slice(0, 3);
+  // Get last 5 completed tournaments
+  const recentTournaments = tournaments
+    .filter((t) => t.status === "completed")
+    .slice(0, 5);
 
   // Get top players by ELO (max 5) - only active players
   const topPlayers = [...players]
