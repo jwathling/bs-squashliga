@@ -6,10 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Layout } from "@/components/layout/Layout";
 import { StatCard } from "@/components/ui/stat-card";
-import { OpponentStats } from "@/components/players/OpponentStats";
 import { usePlayer, useUpdatePlayer } from "@/hooks/usePlayers";
 import { usePlayerTournaments } from "@/hooks/useTournaments";
-import { ArrowLeft, Edit2, Check, X, Trophy, Gamepad2, TrendingUp, Medal } from "lucide-react";
+import { usePlayerOpponents } from "@/hooks/useHeadToHead";
+import { ArrowLeft, Edit2, Check, X, Trophy, Gamepad2, TrendingUp, Medal, Users, ChevronRight } from "lucide-react";
 import { EloChart } from "@/components/players/EloChart";
 import { usePlayerBadges } from "@/hooks/useBadges";
 import { BadgeSummary } from "@/components/badges/BadgeSummary";
@@ -23,6 +23,7 @@ const PlayerProfile = () => {
   const { data: player, isLoading } = usePlayer(id);
   const { data: tournaments = [] } = usePlayerTournaments(id);
   const { data: playerBadges = [] } = usePlayerBadges(id);
+  const { data: opponents = [] } = usePlayerOpponents(id);
   const updatePlayer = useUpdatePlayer();
   
 
@@ -154,58 +155,59 @@ const PlayerProfile = () => {
         </Card>
       )}
 
-      {/* Opponents */}
-      <div className="mb-8">
-        <OpponentStats playerId={player.id} playerName={player.name} />
-      </div>
-
-      {/* Tournament History */}
-      <Card className="shadow-card">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-primary" />
-            Turnierhistorie
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {sortedTournaments.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">
-              Noch keine Turniere gespielt
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {sortedTournaments.map((tp) => {
-                const pointDiff = tp.points_for - tp.points_against;
-                
-                return (
-                  <Link key={tp.id} to={`/tournaments/${tp.tournament.id}`}>
-                    <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors cursor-pointer">
-                      <div>
-                        <h4 className="font-medium">{tp.tournament.name}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {format(new Date(tp.tournament.created_at), "dd. MMMM yyyy", { locale: de })}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm">{tp.wins}/{tp.games_played} Siege</span>
-                          <Badge 
-                            variant={tp.elo_change >= 0 ? "default" : "destructive"}
-                            className={tp.elo_change >= 0 ? "bg-success text-success-foreground" : ""}
-                          >
-                            {tp.elo_change >= 0 ? "+" : ""}{tp.elo_change} ELO
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Diff: {pointDiff >= 0 ? "+" : ""}{pointDiff}
-                        </p>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
+      {/* Turnierhistorie-Vorschau */}
+      <Card className="shadow-card mb-8">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+                <Trophy className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground">Turnierhistorie</h3>
+                <p className="text-sm text-muted-foreground">
+                  {sortedTournaments.length} Turniere
+                  {sortedTournaments.length > 0 && (
+                    <> • Letztes: {sortedTournaments[0].tournament.name}</>
+                  )}
+                </p>
+              </div>
             </div>
-          )}
+            <Link to={`/players/${id}/tournaments`}>
+              <Button variant="outline" size="sm">
+                Alle anzeigen
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Gegner-Vorschau */}
+      <Card className="shadow-card">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+                <Users className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground">Gegner</h3>
+                <p className="text-sm text-muted-foreground">
+                  {opponents.length} Gegner
+                  {opponents.length > 0 && (
+                    <> • Meistgespielt: {opponents[0].opponentName}</>
+                  )}
+                </p>
+              </div>
+            </div>
+            <Link to={`/players/${id}/opponents`}>
+              <Button variant="outline" size="sm">
+                Alle anzeigen
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </Layout>

@@ -9,6 +9,8 @@ import PlayerProfile from "./pages/PlayerProfile";
 import Tournaments from "./pages/Tournaments";
 import NewTournament from "./pages/NewTournament";
 import TournamentLive from "./pages/TournamentLive";
+import PlayerTournaments from "./pages/PlayerTournaments";
+import PlayerOpponents from "./pages/PlayerOpponents";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +25,8 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/players" element={<Players />} />
           <Route path="/players/:id" element={<PlayerProfile />} />
+          <Route path="/players/:id/tournaments" element={<PlayerTournaments />} />
+          <Route path="/players/:id/opponents" element={<PlayerOpponents />} />
           <Route path="/tournaments" element={<Tournaments />} />
           <Route path="/tournaments/new" element={<NewTournament />} />
           <Route path="/tournaments/:id" element={<TournamentLive />} />
