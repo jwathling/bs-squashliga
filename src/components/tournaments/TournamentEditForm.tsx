@@ -9,7 +9,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Users, Search, Play, Save, Plus, X, ChevronDown, Pencil } from "lucide-react";
+import { Users, Search, Play, Save, Plus, X, ChevronDown } from "lucide-react";
 import { usePlayers } from "@/hooks/usePlayers";
 import {
   useUpdateTournamentName,
@@ -51,6 +51,17 @@ export function TournamentEditForm({
     setSelectedPlayers(tournamentPlayers.map((tp) => tp.player_id));
   }, [tournamentPlayers]);
 
+  useEffect(() => {
+    setName(tournamentName);
+  }, [tournamentName]);
+
+  // Listen for edit-tournament-name event from header pencil icon
+  useEffect(() => {
+    const handler = () => setEditingName(true);
+    document.addEventListener('edit-tournament-name', handler);
+    return () => document.removeEventListener('edit-tournament-name', handler);
+  }, []);
+
   const filteredPlayers = allPlayers.filter((p) =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -75,30 +86,33 @@ export function TournamentEditForm({
     setSelectedPlayers((prev) => [...prev, playerId]);
   };
 
-  const handleSaveName = async () => {
-    if (!name.trim()) {
+  const currentPlayerIds = tournamentPlayers.map((tp) => tp.player_id);
+  const hasPlayersChanged =
+    selectedPlayers.length !== currentPlayerIds.length ||
+    !selectedPlayers.every((id) => currentPlayerIds.includes(id));
+  const hasNameChanged = name.trim() !== tournamentName;
+  const hasChanges = hasNameChanged || hasPlayersChanged;
+
+  const handleSaveAll = async () => {
+    if (hasNameChanged && !name.trim()) {
       toast.error("Turniername darf nicht leer sein");
       return;
     }
-    try {
-      await updateName.mutateAsync({ tournamentId, name: name.trim() });
-      setEditingName(false);
-      toast.success("Name gespeichert!");
-    } catch (error) {
-      toast.error("Fehler beim Speichern des Namens");
-    }
-  };
-
-  const handleSavePlayers = async () => {
     if (selectedPlayers.length < 2) {
       toast.error("Mindestens 2 Spieler erforderlich");
       return;
     }
     try {
-      await updatePlayers.mutateAsync({ tournamentId, playerIds: selectedPlayers });
-      toast.success("Spieler gespeichert!");
+      if (hasNameChanged) {
+        await updateName.mutateAsync({ tournamentId, name: name.trim() });
+      }
+      if (hasPlayersChanged) {
+        await updatePlayers.mutateAsync({ tournamentId, playerIds: selectedPlayers });
+      }
+      setEditingName(false);
+      toast.success("Änderungen gespeichert!");
     } catch (error) {
-      toast.error("Fehler beim Speichern der Spieler");
+      toast.error("Fehler beim Speichern");
     }
   };
 
@@ -108,13 +122,12 @@ export function TournamentEditForm({
       return;
     }
 
-    const currentPlayerIds = tournamentPlayers.map((tp) => tp.player_id);
-    const playersChanged =
-      selectedPlayers.length !== currentPlayerIds.length ||
-      !selectedPlayers.every((id) => currentPlayerIds.includes(id));
-
     try {
-      if (playersChanged) {
+      // Save any pending changes first
+      if (hasNameChanged) {
+        await updateName.mutateAsync({ tournamentId, name: name.trim() });
+      }
+      if (hasPlayersChanged) {
         await updatePlayers.mutateAsync({ tournamentId, playerIds: selectedPlayers });
       }
       await startTournament.mutateAsync(tournamentId);
@@ -126,16 +139,11 @@ export function TournamentEditForm({
     }
   };
 
-  const currentPlayerIds = tournamentPlayers.map((tp) => tp.player_id);
-  const hasPlayersChanged =
-    selectedPlayers.length !== currentPlayerIds.length ||
-    !selectedPlayers.every((id) => currentPlayerIds.includes(id));
-
   return (
     <>
       <div className="space-y-6">
         {/* Inline editable name */}
-        {editingName ? (
+        {editingName && (
           <div className="flex items-center gap-2">
             <Input
               value={name}
@@ -143,49 +151,22 @@ export function TournamentEditForm({
               className="text-lg font-semibold max-w-xs"
               autoFocus
               onKeyDown={(e) => {
-                if (e.key === "Enter") handleSaveName();
                 if (e.key === "Escape") { setEditingName(false); setName(tournamentName); }
               }}
             />
-            <Button size="sm" onClick={handleSaveName} disabled={updateName.isPending}>
-              <Save className="h-4 w-4" />
-            </Button>
             <Button size="sm" variant="ghost" onClick={() => { setEditingName(false); setName(tournamentName); }}>
               <X className="h-4 w-4" />
             </Button>
           </div>
-        ) : (
-          <button
-            onClick={() => setEditingName(true)}
-            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors group"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-            <span>Namen ändern</span>
-          </button>
         )}
 
         {/* Participants */}
         <Card>
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                Teilnehmer ({selectedPlayers.length})
-              </CardTitle>
-              <div className="flex gap-2">
-                {hasPlayersChanged && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleSavePlayers}
-                    disabled={updatePlayers.isPending}
-                  >
-                    <Save className="h-4 w-4 mr-1" />
-                    Speichern
-                  </Button>
-                )}
-              </div>
-            </div>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Teilnehmer ({selectedPlayers.length})
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Selected players as chips */}
@@ -288,6 +269,19 @@ export function TournamentEditForm({
           selectedPlayerIds={selectedPlayers}
           allPlayers={allPlayers}
         />
+
+        {/* Unified Save Button - only shown when there are unsaved changes */}
+        {hasChanges && (
+          <Button
+            onClick={handleSaveAll}
+            variant="outline"
+            className="w-full"
+            disabled={updateName.isPending || updatePlayers.isPending}
+          >
+            <Save className="h-4 w-4 mr-2" />
+            {updateName.isPending || updatePlayers.isPending ? "Speichere..." : "Änderungen speichern"}
+          </Button>
+        )}
 
         {/* Start Tournament Button */}
         <Button
