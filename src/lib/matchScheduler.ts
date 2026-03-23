@@ -14,12 +14,11 @@ export interface ScheduledMatch {
 }
 
 /**
- * Optimal 3-player schedule template
- * With 3 players, one back-to-back per round is unavoidable.
- * This order ensures max 2 consecutive games (including cross-round transitions
- * when the same template is reused).
- * Pattern: A-B, C-A, B-C → only A plays back-to-back (games 1&2)
- * Cross-round: ends with B-C, next round starts with A-B → B back-to-back (max 2)
+ * Fixed 3-player schedule template.
+ * With 3 players, back-to-back is mathematically unavoidable:
+ * each player plays 2 of 3 matches per round, so everyone has exactly
+ * one back-to-back per round. This is intentional and fair.
+ * The same order is used for every round — no rotation needed.
  */
 const THREE_PLAYER_TEMPLATE: Array<[number, number]> = [
   [0, 1], // A-B
@@ -293,7 +292,7 @@ export function calculateTotalMatches(playerCount: number): number {
 
 /**
  * Add another round to an existing tournament
- * @param lastMatchPlayers - Optional players from the last match of the previous round
+ * @param lastMatchPlayers - Optional players from the last match of the previous round (ignored for 3 players)
  */
 export function generateAdditionalRound(
   playerIds: string[],
@@ -305,7 +304,7 @@ export function generateAdditionalRound(
   
   let optimizedPairings: Array<[string, string]>;
   
-  // Use optimal templates for known player counts
+  // 3 players: always use the fixed template, ignore lastMatchPlayers
   if (playerIds.length === 3) {
     optimizedPairings = THREE_PLAYER_TEMPLATE.map(([i, j]) => [playerIds[i], playerIds[j]]);
   } else if (playerIds.length === 6) {
