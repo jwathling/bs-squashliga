@@ -1,61 +1,62 @@
 
+# 3-Spieler-Logik vereinfachen
 
-# Spielerprofil aufraumen -- Gegner und Turnierhistorie als Unterseiten
+## Ziel
+Bei genau 3 Spielern soll der Spielplan **jede Runde identisch** bleiben. Kein Sonderfall fuer den Rundenuebergang, keine Rotation, keine "Optimierung" zwischen Runden.
 
-## Uebersicht
+## Warum
+Du hast recht: Bei 3 Spielern spielt **jeder pro Runde genau 2 Spiele** und damit hat **jeder automatisch einmal Back-to-Back**.  
+Das ist nicht unfair, sondern die normale Struktur eines 3er-Round-Robin.
 
-Die Spielerprofil-Seite wird schlanker: **Gegner** und **Turnierhistorie** werden jeweils auf eigene Unterseiten ausgelagert. Auf dem Hauptprofil erscheinen stattdessen kompakte Zusammenfassungs-Kacheln mit einem Button, der zur jeweiligen Detail-Seite fuehrt.
+Das eigentliche Problem war, dass ich den Rundenuebergang separat "fair" machen wollte. Das brauchen wir hier nicht.
 
-Jede Detail-Seite zeigt zuerst eine Fakten-Zusammenfassung (Statistik-Karten) und darunter eine **filterbare, chronologisch sortierte Liste**.
+## Umsetzung
 
-## Neues Seitenkonzept
+### 1. `matchScheduler.ts` fuer 3 Spieler bewusst simpel machen
+- Die 3er-Logik bleibt ein **festes Template**
+- Pro Runde immer exakt dieselbe Reihenfolge:
+```text
+Spiel 1: A-B
+Spiel 2: C-A
+Spiel 3: B-C
+```
+- Diese Reihenfolge gilt fuer:
+  - `generateRoundSchedule(...)`
+  - `generateAdditionalRound(...)`
+
+### 2. Keine Sonderbehandlung fuer `lastMatchPlayers` bei 3 Spielern
+- In `generateAdditionalRound(...)` wird `lastMatchPlayers` fuer 3 Spieler **ignoriert**
+- Der Parameter bleibt nur fuer 4+ Spieler relevant
+
+### 3. Kommentare im Code korrigieren
+Die aktuellen Kommentare erzeugen falsche Erwartungen. Ich wuerde sie anpassen zu:
+- Bei 3 Spielern ist Back-to-Back unvermeidbar
+- Jede Runde verwendet dieselbe feste Reihenfolge
+- Das Verhalten ist absichtlich und korrekt
+
+### 4. Vorschau und echte Match-Erzeugung konsistent halten
+Pruefen, dass dieselbe 3er-Logik ueberall verwendet wird:
+- Planungs-Vorschau (`MatchSchedulePreview`)
+- Turnierstart (`useStartTournament`)
+- Runde hinzufuegen (`handleAddRound` / `generateAdditionalRound`)
+
+## Erwartetes Ergebnis
+Bei 3 Spielern sieht ein Turnier dann bewusst so aus:
 
 ```text
-/players/:id                 --> Profil (Stats, ELO-Chart, Badges, 2 Vorschau-Kacheln)
-/players/:id/tournaments     --> Turnierhistorie (Fakten + filterbare Liste)
-/players/:id/opponents       --> Gegner-Uebersicht (Fakten + filterbare Liste)
+Runde 1: A-B, C-A, B-C
+Runde 2: A-B, C-A, B-C
+Runde 3: A-B, C-A, B-C
 ```
 
-## Aenderungen im Detail
-
-### 1. Zwei neue Seiten erstellen
-
-**`src/pages/PlayerTournaments.tsx`** -- Turnierhistorie
-- Fakten oben: Anzahl Turniere, Durchschnittliche ELO-Aenderung, Bestes Turnier (hoechste ELO-Aenderung), Gesamte Siegquote ueber alle Turniere
-- Darunter: Chronologisch sortierte Liste aller Turniere (neueste oben), wie bisher gestaltet
-- Suchfeld zum Filtern nach Turniername
-- Zurueck-Button zum Profil
-
-**`src/pages/PlayerOpponents.tsx`** -- Gegner-Uebersicht
-- Fakten oben: Anzahl verschiedener Gegner, Bester Gegner (hoechste Siegquote), Schwierigster Gegner (niedrigste Siegquote), Meistgespielter Gegner
-- Darunter: Liste aller Gegner (sortiert nach Anzahl Spiele, neueste Begegnung), inklusive Head-to-Head-Detail bei Klick
-- Suchfeld zum Filtern nach Gegnername
-- Zurueck-Button zum Profil
-
-### 2. PlayerProfile.tsx verschlanken
-
-Die Sektionen "Gegner" und "Turnierhistorie" werden ersetzt durch zwei kompakte Vorschau-Kacheln:
-
-- **Turnierhistorie-Kachel**: Zeigt Anzahl Turniere + letztes Turnier + Button "Alle Turniere anzeigen" (Link zu `/players/:id/tournaments`)
-- **Gegner-Kachel**: Zeigt Anzahl Gegner + meistgespielter Gegner + Button "Alle Gegner anzeigen" (Link zu `/players/:id/opponents`)
-
-Die Reihenfolge auf dem Profil wird:
-1. Stats (ELO, Spiele, Siege, Siegquote)
-2. ELO-Chart
-3. Badges
-4. Turnierhistorie-Vorschau (Kachel)
-5. Gegner-Vorschau (Kachel)
-
-### 3. Routing erweitern (App.tsx)
-
-Zwei neue Routen hinzufuegen:
-- `/players/:id/tournaments` --> `PlayerTournaments`
-- `/players/:id/opponents` --> `PlayerOpponents`
+Damit ist das Verhalten:
+- vorhersehbar
+- einfach
+- mathematisch korrekt
+- ohne unnoetige "Fairness-Korrekturen", die nur neue Probleme erzeugen
 
 ## Technische Details
-
-- Die bestehenden Hooks `usePlayerTournaments` und `usePlayerOpponents` werden wiederverwendet
-- Die Filter-Logik ist rein clientseitig (einfacher `filter()` auf den geladenen Daten)
-- Die `OpponentStats`-Komponente wird in der neuen Gegner-Seite wiederverwendet (Head-to-Head-Detail bei Klick bleibt erhalten)
-- Keine Datenbank-Aenderungen noetig
-
+- Datei: `src/lib/matchScheduler.ts`
+- Kein Datenbank-Update noetig
+- Keine UI-Aenderung noetig
+- Nur Scheduling-Logik und Kommentare bereinigen
