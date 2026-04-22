@@ -1,62 +1,54 @@
 
-# 3-Spieler-Logik vereinfachen
+
+# ELO-Verlauf Filter-Optionen einbauen
 
 ## Ziel
-Bei genau 3 Spielern soll der Spielplan **jede Runde identisch** bleiben. Kein Sonderfall fuer den Rundenuebergang, keine Rotation, keine "Optimierung" zwischen Runden.
-
-## Warum
-Du hast recht: Bei 3 Spielern spielt **jeder pro Runde genau 2 Spiele** und damit hat **jeder automatisch einmal Back-to-Back**.  
-Das ist nicht unfair, sondern die normale Struktur eines 3er-Round-Robin.
-
-Das eigentliche Problem war, dass ich den Rundenuebergang separat "fair" machen wollte. Das brauchen wir hier nicht.
+Im ELO-Verlauf-Chart auf der Spielerprofil-Seite sollen Filter eingebaut werden, mit denen man die Anzahl der angezeigten Turniere einschränken kann (z.B. nur die letzten 5).
 
 ## Umsetzung
 
-### 1. `matchScheduler.ts` fuer 3 Spieler bewusst simpel machen
-- Die 3er-Logik bleibt ein **festes Template**
-- Pro Runde immer exakt dieselbe Reihenfolge:
-```text
-Spiel 1: A-B
-Spiel 2: C-A
-Spiel 3: B-C
-```
-- Diese Reihenfolge gilt fuer:
-  - `generateRoundSchedule(...)`
-  - `generateAdditionalRound(...)`
+### Datei: `src/components/players/EloChart.tsx`
 
-### 2. Keine Sonderbehandlung fuer `lastMatchPlayers` bei 3 Spielern
-- In `generateAdditionalRound(...)` wird `lastMatchPlayers` fuer 3 Spieler **ignoriert**
-- Der Parameter bleibt nur fuer 4+ Spieler relevant
+**1. Filter-Auswahl oben rechts im Chart-Header**
+Ein kompakter Toggle-Group oder Select-Button mit folgenden Optionen:
+- **Letzte 5**
+- **Letzte 10**
+- **Letzte 20**
+- **Alle** (Default)
 
-### 3. Kommentare im Code korrigieren
-Die aktuellen Kommentare erzeugen falsche Erwartungen. Ich wuerde sie anpassen zu:
-- Bei 3 Spielern ist Back-to-Back unvermeidbar
-- Jede Runde verwendet dieselbe feste Reihenfolge
-- Das Verhalten ist absichtlich und korrekt
+**2. State für Filter**
+- Lokaler `useState` für die ausgewählte Option (`5 | 10 | 20 | 'all'`)
+- Default: `'all'` (aktuelles Verhalten bleibt erhalten)
 
-### 4. Vorschau und echte Match-Erzeugung konsistent halten
-Pruefen, dass dieselbe 3er-Logik ueberall verwendet wird:
-- Planungs-Vorschau (`MatchSchedulePreview`)
-- Turnierstart (`useStartTournament`)
-- Runde hinzufuegen (`handleAddRound` / `generateAdditionalRound`)
+**3. Logik**
+- Turniere werden weiterhin chronologisch sortiert (älteste zuerst)
+- Bei Filter `5/10/20`: nur die **letzten N Turniere** (also die neuesten N) anzeigen
+- Der "Start"-Punkt (ELO 1000) wird **nur bei "Alle"** angezeigt. Bei gefilterten Ansichten startet der Chart beim ELO-Wert vor dem ersten sichtbaren Turnier (`elo_at_start` des ersten gezeigten Turniers).
+
+**4. Y-Achsen-Skalierung**
+Die bestehende Auto-Skalierung (`yMin`/`yMax` mit Padding) wird auf den gefilterten Datensatz angewendet — dadurch wird der Chart bei wenigen Turnieren automatisch detaillierter.
+
+**5. Chart-Header anpassen**
+Der Filter-Button wird in den `CardHeader` rechts neben den Titel platziert (flex layout).
 
 ## Erwartetes Ergebnis
-Bei 3 Spielern sieht ein Turnier dann bewusst so aus:
 
 ```text
-Runde 1: A-B, C-A, B-C
-Runde 2: A-B, C-A, B-C
-Runde 3: A-B, C-A, B-C
+┌─────────────────────────────────────────┐
+│ 📈 ELO-Verlauf      [5] [10] [20] [Alle]│
+├─────────────────────────────────────────┤
+│                                          │
+│   (Chart zeigt nur gefilterte Turniere)  │
+│                                          │
+└─────────────────────────────────────────┘
 ```
 
-Damit ist das Verhalten:
-- vorhersehbar
-- einfach
-- mathematisch korrekt
-- ohne unnoetige "Fairness-Korrekturen", die nur neue Probleme erzeugen
+- Spieler mit vielen Turnieren bekommen eine übersichtlichere Ansicht
+- Bei wenigen Turnieren als Filter erlaubt: zeigt einfach alle vorhandenen
+- Kein DB-Update, keine neuen Hooks — rein UI-Änderung im Chart-Component
 
 ## Technische Details
-- Datei: `src/lib/matchScheduler.ts`
-- Kein Datenbank-Update noetig
-- Keine UI-Aenderung noetig
-- Nur Scheduling-Logik und Kommentare bereinigen
+- Datei: `src/components/players/EloChart.tsx`
+- UI-Komponente: `ToggleGroup` aus `@/components/ui/toggle-group` (bereits vorhanden)
+- Keine Änderung an `PlayerProfile.tsx` nötig — das Component bekommt weiterhin alle Turniere und filtert intern
+
