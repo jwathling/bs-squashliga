@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from "@/components/ui/chart";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Area, AreaChart, XAxis, YAxis, ReferenceLine } from "recharts";
 import { TrendingUp } from "lucide-react";
 import { format } from "date-fns";
@@ -22,6 +24,8 @@ interface EloChartProps {
   currentElo: number;
 }
 
+type FilterOption = "5" | "10" | "20" | "all";
+
 const chartConfig = {
   elo: {
     label: "ELO",
@@ -30,6 +34,8 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export const EloChart = ({ tournaments, currentElo }: EloChartProps) => {
+  const [filter, setFilter] = useState<FilterOption>("all");
+
   if (tournaments.length === 0) {
     return (
       <Card className="shadow-card">
@@ -53,21 +59,48 @@ export const EloChart = ({ tournaments, currentElo }: EloChartProps) => {
     (a, b) => new Date(a.tournament.scheduled_date).getTime() - new Date(b.tournament.scheduled_date).getTime()
   );
 
-  // Build chart data with cumulative ELO
-  const chartData = [
-    {
-      name: "Start",
-      elo: 1000,
-      change: 0,
-      date: "Start",
-    },
-    ...sortedTournaments.map((tp) => ({
-      name: tp.tournament.name,
-      elo: tp.elo_at_start + tp.elo_change,
-      change: tp.elo_change,
-      date: format(new Date(tp.tournament.scheduled_date), "dd.MM.yy", { locale: de }),
-    })),
-  ];
+  // Apply filter: take last N tournaments
+  const filteredTournaments =
+    filter === "all"
+      ? sortedTournaments
+      : sortedTournaments.slice(-parseInt(filter, 10));
+
+  // Build chart data
+  const chartData =
+    filter === "all"
+      ? [
+          {
+            name: "Start",
+            elo: 1000,
+            change: 0,
+            date: "Start",
+          },
+          ...filteredTournaments.map((tp) => ({
+            name: tp.tournament.name,
+            elo: tp.elo_at_start + tp.elo_change,
+            change: tp.elo_change,
+            date: format(new Date(tp.tournament.scheduled_date), "dd.MM.yy", { locale: de }),
+          })),
+        ]
+      : [
+          // Start point at ELO before first visible tournament
+          ...(filteredTournaments.length > 0
+            ? [
+                {
+                  name: "Vorher",
+                  elo: filteredTournaments[0].elo_at_start,
+                  change: 0,
+                  date: "—",
+                },
+              ]
+            : []),
+          ...filteredTournaments.map((tp) => ({
+            name: tp.tournament.name,
+            elo: tp.elo_at_start + tp.elo_change,
+            change: tp.elo_change,
+            date: format(new Date(tp.tournament.scheduled_date), "dd.MM.yy", { locale: de }),
+          })),
+        ];
 
   // Calculate Y-axis domain with padding
   const eloValues = chartData.map((d) => d.elo);
@@ -80,10 +113,34 @@ export const EloChart = ({ tournaments, currentElo }: EloChartProps) => {
   return (
     <Card className="shadow-card">
       <CardHeader>
-        <CardTitle className="text-lg flex items-center gap-2">
-          <TrendingUp className="h-5 w-5 text-primary" />
-          ELO-Verlauf
-        </CardTitle>
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-primary" />
+            ELO-Verlauf
+          </CardTitle>
+          <ToggleGroup
+            type="single"
+            size="sm"
+            value={filter}
+            onValueChange={(value) => {
+              if (value) setFilter(value as FilterOption);
+            }}
+            className="border border-border rounded-md"
+          >
+            <ToggleGroupItem value="5" className="text-xs px-3">
+              5
+            </ToggleGroupItem>
+            <ToggleGroupItem value="10" className="text-xs px-3">
+              10
+            </ToggleGroupItem>
+            <ToggleGroupItem value="20" className="text-xs px-3">
+              20
+            </ToggleGroupItem>
+            <ToggleGroupItem value="all" className="text-xs px-3">
+              Alle
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="h-[250px] w-full">
