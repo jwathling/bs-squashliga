@@ -301,7 +301,27 @@ export function useStartTournament() {
 
       const playerIds = tournamentPlayers.map((tp) => tp.player_id);
 
-      // 2. Generate round-robin matches (imported from matchScheduler)
+      // 2. Refresh elo_at_start for all tournament players to their CURRENT global ELO.
+      // This ensures the tournament starts with up-to-date ELO values, even if the
+      // tournament was planned earlier and other tournaments were played in between.
+      const { data: currentPlayers, error: currentPlayersError } = await supabase
+        .from("players")
+        .select("id, elo")
+        .in("id", playerIds);
+
+      if (currentPlayersError) throw currentPlayersError;
+
+      await Promise.all(
+        (currentPlayers || []).map((p) =>
+          supabase
+            .from("tournament_players")
+            .update({ elo_at_start: p.elo })
+            .eq("tournament_id", tournamentId)
+            .eq("player_id", p.id)
+        )
+      );
+
+      // 3. Generate round-robin matches (imported from matchScheduler)
       const { generateRoundSchedule } = await import("@/lib/matchScheduler");
       const matches = generateRoundSchedule(playerIds, 1);
 
