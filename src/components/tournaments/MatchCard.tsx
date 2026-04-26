@@ -154,7 +154,7 @@ export function MatchCard({ match, onScoreSubmit, disabled }: MatchCardProps) {
         </div>
 
         {/* Action Buttons */}
-        {(!isCompleted || isEditing) && (
+        {!isDiscarded && (!isCompleted || isEditing) && (
           <div className="flex justify-center gap-2 mt-3">
             {isEditing && (
               <Button
