@@ -128,8 +128,24 @@ const TournamentLive = () => {
   const isCompleted = tournament.status === "completed";
   const isActive = tournament.status === "active";
   const completedMatches = matches.filter((m) => m.status === "completed").length;
-  const totalMatches = matches.length;
+  const totalMatches = matches.filter((m) => m.status !== "discarded").length;
   const allMatchesPlayed = completedMatches === totalMatches && totalMatches > 0;
+
+  // Erkenne unvollständige Runde: hat completed UND pending Matches in derselben Runde
+  const incompleteRound = (() => {
+    const byRound: Record<number, { completed: number; pending: number }> = {};
+    for (const m of matches) {
+      if (m.status === "discarded") continue;
+      if (!byRound[m.round]) byRound[m.round] = { completed: 0, pending: 0 };
+      if (m.status === "completed") byRound[m.round].completed++;
+      else if (m.status === "pending") byRound[m.round].pending++;
+    }
+    const rounds = Object.entries(byRound)
+      .filter(([, v]) => v.completed > 0 && v.pending > 0)
+      .map(([r, v]) => ({ round: Number(r), ...v }))
+      .sort((a, b) => b.round - a.round);
+    return rounds[0] || null;
+  })();
 
   // Group matches by round
   const matchesByRound = matches.reduce((acc, match) => {
