@@ -245,7 +245,19 @@ export function useUpdateTournamentPlayers() {
       tournamentId: string;
       playerIds: string[];
     }) => {
-      // Delete all existing tournament_players
+      // Get existing tournament_players to preserve their elo_at_start
+      const { data: existingPlayers, error: existingError } = await supabase
+        .from("tournament_players")
+        .select("player_id, elo_at_start")
+        .eq("tournament_id", tournamentId);
+
+      if (existingError) throw existingError;
+
+      const existingMap = new Map(
+        (existingPlayers || []).map((ep) => [ep.player_id, ep.elo_at_start])
+      );
+
+      // Delete all existing tournament_players (we re-insert below to handle adds/removes)
       const { error: deleteError } = await supabase
         .from("tournament_players")
         .delete()
@@ -253,7 +265,7 @@ export function useUpdateTournamentPlayers() {
 
       if (deleteError) throw deleteError;
 
-      // Get players to store their current ELO
+      // Get players to store their current ELO (only used for newly added players)
       const { data: players, error: playersError } = await supabase
         .from("players")
         .select("id, elo")
@@ -261,13 +273,16 @@ export function useUpdateTournamentPlayers() {
 
       if (playersError) throw playersError;
 
-      // Add new tournament_players
+      // Add tournament_players: keep existing elo_at_start for players who were
+      // already in the tournament; use current ELO only for newly added players.
+      // Note: useStartTournament will refresh all values to current ELO at start time.
       const tournamentPlayers = playerIds.map((playerId) => {
+        const existingElo = existingMap.get(playerId);
         const player = players.find((p) => p.id === playerId);
         return {
           tournament_id: tournamentId,
           player_id: playerId,
-          elo_at_start: player?.elo || 1000,
+          elo_at_start: existingElo ?? player?.elo ?? 1000,
         };
       });
 
