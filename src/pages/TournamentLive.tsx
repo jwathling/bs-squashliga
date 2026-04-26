@@ -20,6 +20,8 @@ import { Layout } from "@/components/layout/Layout";
 import { LiveTable } from "@/components/tournaments/LiveTable";
 import { MatchCard } from "@/components/tournaments/MatchCard";
 import { TournamentEditForm } from "@/components/tournaments/TournamentEditForm";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import {
   useTournament,
   useTournamentPlayers,
@@ -53,6 +55,7 @@ const TournamentLive = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [datePopoverOpen, setDatePopoverOpen] = useState(false);
+  const [completeChoice, setCompleteChoice] = useState<"discard" | "keep">("discard");
   
   const { data: tournament, isLoading: tournamentLoading } = useTournament(id);
   const { data: tournamentPlayers = [], isLoading: playersLoading } = useTournamentPlayers(id);
@@ -125,8 +128,24 @@ const TournamentLive = () => {
   const isCompleted = tournament.status === "completed";
   const isActive = tournament.status === "active";
   const completedMatches = matches.filter((m) => m.status === "completed").length;
-  const totalMatches = matches.length;
+  const totalMatches = matches.filter((m) => m.status !== "discarded").length;
   const allMatchesPlayed = completedMatches === totalMatches && totalMatches > 0;
+
+  // Erkenne unvollständige Runde: hat completed UND pending Matches in derselben Runde
+  const incompleteRound = (() => {
+    const byRound: Record<number, { completed: number; pending: number }> = {};
+    for (const m of matches) {
+      if (m.status === "discarded") continue;
+      if (!byRound[m.round]) byRound[m.round] = { completed: 0, pending: 0 };
+      if (m.status === "completed") byRound[m.round].completed++;
+      else if (m.status === "pending") byRound[m.round].pending++;
+    }
+    const rounds = Object.entries(byRound)
+      .filter(([, v]) => v.completed > 0 && v.pending > 0)
+      .map(([r, v]) => ({ round: Number(r), ...v }))
+      .sort((a, b) => b.round - a.round);
+    return rounds[0] || null;
+  })();
 
   // Group matches by round
   const matchesByRound = matches.reduce((acc, match) => {
@@ -322,20 +341,30 @@ const TournamentLive = () => {
 
   const handleCompleteTournament = async () => {
     try {
-      await completeTournament.mutateAsync(tournament.id);
+      const shouldDiscard = incompleteRound && completeChoice === "discard";
+      await completeTournament.mutateAsync({
+        tournamentId: tournament.id,
+        discardRound: shouldDiscard ? incompleteRound!.round : undefined,
+      });
 
-      // Calculate and award badges
+      // Calculate and award badges (verworfene Matches sind in matches noch nicht aktualisiert,
+      // daher hier explizit ausschließen)
+      const matchesForBadges = shouldDiscard
+        ? matches.filter((m) => m.round !== incompleteRound!.round)
+        : matches;
       const playerNames: Record<string, string> = {};
       for (const tp of tournamentPlayers) {
         const player = allPlayers.find((p) => p.id === tp.player_id);
         if (player) playerNames[player.id] = player.name;
       }
-      const calculatedBadges = calculateTournamentBadges(matches, tournamentPlayers, playerNames);
+      const calculatedBadges = calculateTournamentBadges(matchesForBadges, tournamentPlayers, playerNames);
       await awardBadges.mutateAsync({ tournamentId: tournament.id, badges: calculatedBadges });
 
       setShowCompleteDialog(false);
       toast.success(
-        allMatchesPlayed
+        shouldDiscard
+          ? `Turnier beendet! Runde ${incompleteRound!.round} wurde verworfen.`
+          : allMatchesPlayed
           ? "Turnier beendet!"
           : `Turnier vorzeitig beendet! ${completedMatches} von ${totalMatches} Spielen gewertet.`
       );
@@ -444,7 +473,7 @@ const TournamentLive = () => {
                 Neue Runde
               </Button>
               
-              {allMatchesPlayed ? (
+              {allMatchesPlayed && !incompleteRound ? (
                 <Button onClick={handleCompleteTournament} disabled={completeTournament.isPending}>
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Turnier beenden
@@ -460,10 +489,54 @@ const TournamentLive = () => {
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>Turnier vorzeitig beenden?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Es wurden {completedMatches} von {totalMatches} Spielen gespielt. 
-                        Nicht gespielte Matches werden ignoriert. Die bisherigen 
-                        Ergebnisse werden normal gewertet.
+                      <AlertDialogDescription asChild>
+                        {incompleteRound ? (
+                          <div className="space-y-3">
+                            <p>
+                              Runde {incompleteRound.round} ist nur teilweise gespielt
+                              ({incompleteRound.completed} von{" "}
+                              {incompleteRound.completed + incompleteRound.pending} Spielen).
+                            </p>
+                            <p>Wie soll damit umgegangen werden?</p>
+                            <RadioGroup
+                              value={completeChoice}
+                              onValueChange={(v) => setCompleteChoice(v as "discard" | "keep")}
+                              className="gap-3 pt-1"
+                            >
+                              <div className="flex items-start gap-3 rounded-md border p-3">
+                                <RadioGroupItem value="discard" id="opt-discard" className="mt-0.5" />
+                                <Label htmlFor="opt-discard" className="font-normal cursor-pointer flex-1">
+                                  <div className="font-medium text-foreground">
+                                    Letzte Runde verwerfen (empfohlen)
+                                  </div>
+                                  <div className="text-sm text-muted-foreground mt-1">
+                                    Alle Spiele aus Runde {incompleteRound.round} werden ignoriert.
+                                    Die Tabelle bleibt fair, weil alle Spieler gleich viele Spiele haben.
+                                  </div>
+                                </Label>
+                              </div>
+                              <div className="flex items-start gap-3 rounded-md border p-3">
+                                <RadioGroupItem value="keep" id="opt-keep" className="mt-0.5" />
+                                <Label htmlFor="opt-keep" className="font-normal cursor-pointer flex-1">
+                                  <div className="font-medium text-foreground">
+                                    Alle gespielten Spiele werten
+                                  </div>
+                                  <div className="text-sm text-muted-foreground mt-1">
+                                    Auch die {incompleteRound.completed} Spiele aus Runde{" "}
+                                    {incompleteRound.round} zählen. Achtung: ungleiche Spielanzahl
+                                    pro Spieler.
+                                  </div>
+                                </Label>
+                              </div>
+                            </RadioGroup>
+                          </div>
+                        ) : (
+                          <span>
+                            Es wurden {completedMatches} von {totalMatches} Spielen gespielt.
+                            Nicht gespielte Matches werden ignoriert. Die bisherigen
+                            Ergebnisse werden normal gewertet.
+                          </span>
+                        )}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

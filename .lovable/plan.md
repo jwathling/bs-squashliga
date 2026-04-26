@@ -1,54 +1,71 @@
+# Unvollständige Runden beim Turnierende behandeln
 
+## Problem
+Wird ein Turnier vorzeitig beendet während eine Runde nur teilweise gespielt wurde (z.B. 2 von 3 Spielen aus Runde 3), entsteht eine **unfaire Tabelle**: einige Spieler haben mehr Spiele und damit mehr Sieg-Chancen als andere. Da nach Siegen sortiert wird, verfälscht das das Ergebnis.
 
-# ELO-Verlauf Filter-Optionen einbauen
-
-## Ziel
-Im ELO-Verlauf-Chart auf der Spielerprofil-Seite sollen Filter eingebaut werden, mit denen man die Anzahl der angezeigten Turniere einschränken kann (z.B. nur die letzten 5).
+## Lösung
+Beim Beenden eines Turniers mit unvollständiger Runde bekommt der User eine **manuelle Auswahl** im Bestätigungsdialog. Verworfene Matches bleiben in der DB, werden aber als `discarded` markiert — so ist nachvollziehbar was passiert ist.
 
 ## Umsetzung
 
-### Datei: `src/components/players/EloChart.tsx`
+### 1. DB-Schema
+`matches.status` ist ein freies `text`-Feld (kein Enum) — neuer Wert `'discarded'` ist ohne Migration möglich.
 
-**1. Filter-Auswahl oben rechts im Chart-Header**
-Ein kompakter Toggle-Group oder Select-Button mit folgenden Optionen:
-- **Letzte 5**
-- **Letzte 10**
-- **Letzte 20**
-- **Alle** (Default)
+### 2. Erkennung "unvollständige Runde"
+Im Beenden-Dialog prüfen: Gibt es eine Runde mit mind. einem `completed` UND mind. einem `pending` Match? Wenn ja → erweiterten Dialog zeigen.
 
-**2. State für Filter**
-- Lokaler `useState` für die ausgewählte Option (`5 | 10 | 20 | 'all'`)
-- Default: `'all'` (aktuelles Verhalten bleibt erhalten)
+### 3. Erweiterter Beenden-Dialog (`TournamentLive.tsx`)
+Bei unvollständiger Runde mit RadioGroup:
 
-**3. Logik**
-- Turniere werden weiterhin chronologisch sortiert (älteste zuerst)
-- Bei Filter `5/10/20`: nur die **letzten N Turniere** (also die neuesten N) anzeigen
-- Der "Start"-Punkt (ELO 1000) wird **nur bei "Alle"** angezeigt. Bei gefilterten Ansichten startet der Chart beim ELO-Wert vor dem ersten sichtbaren Turnier (`elo_at_start` des ersten gezeigten Turniers).
+```
+Turnier vorzeitig beenden?
 
-**4. Y-Achsen-Skalierung**
-Die bestehende Auto-Skalierung (`yMin`/`yMax` mit Padding) wird auf den gefilterten Datensatz angewendet — dadurch wird der Chart bei wenigen Turnieren automatisch detaillierter.
+Runde 3 ist nur teilweise gespielt (2 von 3 Spielen).
 
-**5. Chart-Header anpassen**
-Der Filter-Button wird in den `CardHeader` rechts neben den Titel platziert (flex layout).
+○ Letzte Runde verwerfen (empfohlen)
+  Alle Spiele aus Runde 3 werden ignoriert.
+  Tabelle bleibt fair, alle haben gleich viele Spiele.
 
-## Erwartetes Ergebnis
-
-```text
-┌─────────────────────────────────────────┐
-│ 📈 ELO-Verlauf      [5] [10] [20] [Alle]│
-├─────────────────────────────────────────┤
-│                                          │
-│   (Chart zeigt nur gefilterte Turniere)  │
-│                                          │
-└─────────────────────────────────────────┘
+○ Alle gespielten Spiele werten
+  Auch die 2 Spiele aus Runde 3 zählen.
+  Achtung: ungleiche Spielanzahl pro Spieler.
 ```
 
-- Spieler mit vielen Turnieren bekommen eine übersichtlichere Ansicht
-- Bei wenigen Turnieren als Filter erlaubt: zeigt einfach alle vorhandenen
-- Kein DB-Update, keine neuen Hooks — rein UI-Änderung im Chart-Component
+### 4. Logik beim Beenden
+**"Letzte Runde verwerfen":**
+- Für jedes `completed` Match der Runde:
+  - ELO zurückrechnen (Logik analog `useDeleteTournament`)
+  - `tournament_players`-Stats korrigieren (games_played, wins, points_for/against, elo_change)
+  - Globale `players`-Stats korrigieren (elo, total_games, total_wins)
+- Match-Status auf `'discarded'` setzen, Score/Winner behalten
+- Pending Matches der Runde ebenfalls auf `'discarded'`
+- Turnier auf `completed`
+
+**"Alle werten":** Aktuelles Verhalten — pending bleibt pending.
+
+### 5. Anzeige verworfener Matches (`MatchCard.tsx`)
+- Ausgegraut, Badge "Verworfen", Score durchgestrichen, nicht editierbar.
+
+### 6. Hook (`useCompleteTournament`)
+Erweitern um optionalen Parameter `discardRound?: number`.
+
+### 7. LiveTable
+Bleibt unverändert — Stats werden in `tournament_players` korrekt zurückgerechnet.
+
+### 8. Badge-Berechnung
+Bestehende Logik filtert nach `status === "completed"` → verworfene fliegen automatisch raus.
+
+## Erwartetes Ergebnis
+4 Spieler, Runde 3 angefangen, 2/6 Spiele, "Letzte Runde verwerfen":
+- Alle Spieler haben exakt 4 Spiele
+- ELO-Änderungen aus Runde 3 zurückgerollt
+- Globale Stats sauber
+- Runde-3-Spiele als "Verworfen" sichtbar (Transparenz)
+- Tabelle fair und aussagekräftig
 
 ## Technische Details
-- Datei: `src/components/players/EloChart.tsx`
-- UI-Komponente: `ToggleGroup` aus `@/components/ui/toggle-group` (bereits vorhanden)
-- Keine Änderung an `PlayerProfile.tsx` nötig — das Component bekommt weiterhin alle Turniere und filtert intern
-
+- `src/hooks/useTournaments.ts` (erweitern `useCompleteTournament`)
+- `src/pages/TournamentLive.tsx` (RadioGroup im Dialog)
+- `src/components/tournaments/MatchCard.tsx` (Discarded-Darstellung)
+- Kein DB-Schema-Update nötig
+- Memory-Update: `mem://features/turnier-verwaltung/vorzeitiges-beenden`

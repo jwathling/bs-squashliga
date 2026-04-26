@@ -21,6 +21,7 @@ export function MatchCard({ match, onScoreSubmit, disabled }: MatchCardProps) {
   const [isEditing, setIsEditing] = useState(false);
 
   const isCompleted = match.status === "completed";
+  const isDiscarded = match.status === "discarded";
   const player1Name = match.player1?.name || "Spieler 1";
   const player2Name = match.player2?.name || "Spieler 2";
 
@@ -58,7 +59,8 @@ export function MatchCard({ match, onScoreSubmit, disabled }: MatchCardProps) {
     <Card className={cn(
       "transition-all",
       isCompleted && "bg-muted/30",
-      !isCompleted && "shadow-card"
+      isDiscarded && "bg-muted/20 opacity-60",
+      !isCompleted && !isDiscarded && "shadow-card"
     )}>
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-2">
@@ -68,6 +70,11 @@ export function MatchCard({ match, onScoreSubmit, disabled }: MatchCardProps) {
           {isCompleted && (
             <Badge variant="secondary" className="bg-success/20 text-success">
               Beendet
+            </Badge>
+          )}
+          {isDiscarded && (
+            <Badge variant="outline" className="text-xs text-muted-foreground border-muted-foreground/30">
+              Verworfen
             </Badge>
           )}
         </div>
@@ -83,7 +90,17 @@ export function MatchCard({ match, onScoreSubmit, disabled }: MatchCardProps) {
 
           {/* Score Inputs */}
           <div className="flex items-center gap-2">
-            {isCompleted && !isEditing ? (
+            {isDiscarded ? (
+              <div className="flex items-center gap-2 p-2">
+                <span className="text-2xl font-bold w-8 text-center text-muted-foreground line-through">
+                  {match.player1_score ?? "-"}
+                </span>
+                <span className="text-muted-foreground">:</span>
+                <span className="text-2xl font-bold w-8 text-center text-muted-foreground line-through">
+                  {match.player2_score ?? "-"}
+                </span>
+              </div>
+            ) : isCompleted && !isEditing ? (
               <div 
                 className="flex items-center gap-2 cursor-pointer hover:bg-secondary rounded-lg p-2 transition-colors"
                 onClick={() => !disabled && setIsEditing(true)}
@@ -137,7 +154,7 @@ export function MatchCard({ match, onScoreSubmit, disabled }: MatchCardProps) {
         </div>
 
         {/* Action Buttons */}
-        {(!isCompleted || isEditing) && (
+        {!isDiscarded && (!isCompleted || isEditing) && (
           <div className="flex justify-center gap-2 mt-3">
             {isEditing && (
               <Button
