@@ -341,20 +341,30 @@ const TournamentLive = () => {
 
   const handleCompleteTournament = async () => {
     try {
-      await completeTournament.mutateAsync(tournament.id);
+      const shouldDiscard = incompleteRound && completeChoice === "discard";
+      await completeTournament.mutateAsync({
+        tournamentId: tournament.id,
+        discardRound: shouldDiscard ? incompleteRound!.round : undefined,
+      });
 
-      // Calculate and award badges
+      // Calculate and award badges (verworfene Matches sind in matches noch nicht aktualisiert,
+      // daher hier explizit ausschließen)
+      const matchesForBadges = shouldDiscard
+        ? matches.filter((m) => m.round !== incompleteRound!.round)
+        : matches;
       const playerNames: Record<string, string> = {};
       for (const tp of tournamentPlayers) {
         const player = allPlayers.find((p) => p.id === tp.player_id);
         if (player) playerNames[player.id] = player.name;
       }
-      const calculatedBadges = calculateTournamentBadges(matches, tournamentPlayers, playerNames);
+      const calculatedBadges = calculateTournamentBadges(matchesForBadges, tournamentPlayers, playerNames);
       await awardBadges.mutateAsync({ tournamentId: tournament.id, badges: calculatedBadges });
 
       setShowCompleteDialog(false);
       toast.success(
-        allMatchesPlayed
+        shouldDiscard
+          ? `Turnier beendet! Runde ${incompleteRound!.round} wurde verworfen.`
+          : allMatchesPlayed
           ? "Turnier beendet!"
           : `Turnier vorzeitig beendet! ${completedMatches} von ${totalMatches} Spielen gewertet.`
       );
