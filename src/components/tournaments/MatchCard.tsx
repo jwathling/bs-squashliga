@@ -21,6 +21,7 @@ export function MatchCard({ match, onScoreSubmit, disabled }: MatchCardProps) {
   const [isEditing, setIsEditing] = useState(false);
 
   const isCompleted = match.status === "completed";
+  const isDiscarded = match.status === "discarded";
   const player1Name = match.player1?.name || "Spieler 1";
   const player2Name = match.player2?.name || "Spieler 2";
 
