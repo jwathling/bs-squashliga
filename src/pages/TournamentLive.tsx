@@ -20,6 +20,8 @@ import { Layout } from "@/components/layout/Layout";
 import { LiveTable } from "@/components/tournaments/LiveTable";
 import { MatchCard } from "@/components/tournaments/MatchCard";
 import { TournamentEditForm } from "@/components/tournaments/TournamentEditForm";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import {
   useTournament,
   useTournamentPlayers,
