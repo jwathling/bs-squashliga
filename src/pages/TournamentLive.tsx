@@ -473,7 +473,7 @@ const TournamentLive = () => {
                 Neue Runde
               </Button>
               
-              {allMatchesPlayed ? (
+              {allMatchesPlayed && !incompleteRound ? (
                 <Button onClick={handleCompleteTournament} disabled={completeTournament.isPending}>
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Turnier beenden
@@ -489,10 +489,54 @@ const TournamentLive = () => {
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>Turnier vorzeitig beenden?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Es wurden {completedMatches} von {totalMatches} Spielen gespielt. 
-                        Nicht gespielte Matches werden ignoriert. Die bisherigen 
-                        Ergebnisse werden normal gewertet.
+                      <AlertDialogDescription asChild>
+                        {incompleteRound ? (
+                          <div className="space-y-3">
+                            <p>
+                              Runde {incompleteRound.round} ist nur teilweise gespielt
+                              ({incompleteRound.completed} von{" "}
+                              {incompleteRound.completed + incompleteRound.pending} Spielen).
+                            </p>
+                            <p>Wie soll damit umgegangen werden?</p>
+                            <RadioGroup
+                              value={completeChoice}
+                              onValueChange={(v) => setCompleteChoice(v as "discard" | "keep")}
+                              className="gap-3 pt-1"
+                            >
+                              <div className="flex items-start gap-3 rounded-md border p-3">
+                                <RadioGroupItem value="discard" id="opt-discard" className="mt-0.5" />
+                                <Label htmlFor="opt-discard" className="font-normal cursor-pointer flex-1">
+                                  <div className="font-medium text-foreground">
+                                    Letzte Runde verwerfen (empfohlen)
+                                  </div>
+                                  <div className="text-sm text-muted-foreground mt-1">
+                                    Alle Spiele aus Runde {incompleteRound.round} werden ignoriert.
+                                    Die Tabelle bleibt fair, weil alle Spieler gleich viele Spiele haben.
+                                  </div>
+                                </Label>
+                              </div>
+                              <div className="flex items-start gap-3 rounded-md border p-3">
+                                <RadioGroupItem value="keep" id="opt-keep" className="mt-0.5" />
+                                <Label htmlFor="opt-keep" className="font-normal cursor-pointer flex-1">
+                                  <div className="font-medium text-foreground">
+                                    Alle gespielten Spiele werten
+                                  </div>
+                                  <div className="text-sm text-muted-foreground mt-1">
+                                    Auch die {incompleteRound.completed} Spiele aus Runde{" "}
+                                    {incompleteRound.round} zählen. Achtung: ungleiche Spielanzahl
+                                    pro Spieler.
+                                  </div>
+                                </Label>
+                              </div>
+                            </RadioGroup>
+                          </div>
+                        ) : (
+                          <span>
+                            Es wurden {completedMatches} von {totalMatches} Spielen gespielt.
+                            Nicht gespielte Matches werden ignoriert. Die bisherigen
+                            Ergebnisse werden normal gewertet.
+                          </span>
+                        )}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
