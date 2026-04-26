@@ -55,6 +55,7 @@ const TournamentLive = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [datePopoverOpen, setDatePopoverOpen] = useState(false);
+  const [completeChoice, setCompleteChoice] = useState<"discard" | "keep">("discard");
   
   const { data: tournament, isLoading: tournamentLoading } = useTournament(id);
   const { data: tournamentPlayers = [], isLoading: playersLoading } = useTournamentPlayers(id);
