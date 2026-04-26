@@ -59,7 +59,8 @@ export function MatchCard({ match, onScoreSubmit, disabled }: MatchCardProps) {
     <Card className={cn(
       "transition-all",
       isCompleted && "bg-muted/30",
-      !isCompleted && "shadow-card"
+      isDiscarded && "bg-muted/20 opacity-60",
+      !isCompleted && !isDiscarded && "shadow-card"
     )}>
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-2">
@@ -69,6 +70,11 @@ export function MatchCard({ match, onScoreSubmit, disabled }: MatchCardProps) {
           {isCompleted && (
             <Badge variant="secondary" className="bg-success/20 text-success">
               Beendet
+            </Badge>
+          )}
+          {isDiscarded && (
+            <Badge variant="outline" className="text-xs text-muted-foreground border-muted-foreground/30">
+              Verworfen
             </Badge>
           )}
         </div>
