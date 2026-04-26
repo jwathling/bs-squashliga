@@ -520,7 +520,142 @@ export function useCompleteTournament() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (tournamentId: string) => {
+    mutationFn: async (
+      input: string | { tournamentId: string; discardRound?: number }
+    ) => {
+      const tournamentId = typeof input === "string" ? input : input.tournamentId;
+      const discardRound = typeof input === "string" ? undefined : input.discardRound;
+
+      // Optional: alle Matches der angegebenen Runde verwerfen und Stats zurückrechnen
+      if (discardRound !== undefined) {
+        // 1. Alle Matches der Runde holen
+        const { data: roundMatches, error: roundError } = await supabase
+          .from("matches")
+          .select("*")
+          .eq("tournament_id", tournamentId)
+          .eq("round", discardRound);
+
+        if (roundError) throw roundError;
+
+        const completedMatches = (roundMatches || []).filter(
+          (m) => m.status === "completed"
+        );
+
+        if (completedMatches.length > 0) {
+          // 2. Tournament-Player-Stats zurückrechnen
+          const { data: tps, error: tpsError } = await supabase
+            .from("tournament_players")
+            .select("*")
+            .eq("tournament_id", tournamentId);
+          if (tpsError) throw tpsError;
+
+          const tpMap = new Map(tps?.map((tp) => [tp.player_id, { ...tp }]) || []);
+
+          for (const m of completedMatches) {
+            const tp1 = tpMap.get(m.player1_id);
+            const tp2 = tpMap.get(m.player2_id);
+            if (!tp1 || !tp2) continue;
+
+            // ELO-Änderung dieses Matches berechnen (basierend auf Tournament-ELO VOR diesem Match)
+            // Wir rechnen rückwärts: aktueller Tournament-ELO minus alle anderen Matches.
+            // Vereinfachung: wir nutzen die finalen Tournament-ELOs und ziehen die Match-ELO-Änderung ab.
+            // Dafür berechnen wir die ELO-Änderung mit den aktuellen Tournament-ELOs (Approximation).
+            const { calculateMatchEloChanges } = await import("@/lib/elo");
+            const p1Elo = tp1.elo_at_start + tp1.elo_change;
+            const p2Elo = tp2.elo_at_start + tp2.elo_change;
+            // Reverse: berechne, was die Änderung war, indem wir mit den ELOs VOR diesem Match rechnen
+            // Approximation: wir nutzen die aktuellen ELOs minus die zu erwartende Änderung
+            const changes = calculateMatchEloChanges(
+              p1Elo - 0,
+              p2Elo - 0,
+              m.player1_score!,
+              m.player2_score!
+            );
+
+            tp1.games_played -= 1;
+            tp2.games_played -= 1;
+            tp1.points_for -= m.player1_score!;
+            tp1.points_against -= m.player2_score!;
+            tp2.points_for -= m.player2_score!;
+            tp2.points_against -= m.player1_score!;
+            if (m.winner_id === m.player1_id) tp1.wins -= 1;
+            else if (m.winner_id === m.player2_id) tp2.wins -= 1;
+            tp1.elo_change -= changes.player1.change;
+            tp2.elo_change -= changes.player2.change;
+          }
+
+          // 3. Tournament-Player-Stats updaten
+          for (const tp of tpMap.values()) {
+            await supabase
+              .from("tournament_players")
+              .update({
+                games_played: tp.games_played,
+                wins: tp.wins,
+                points_for: tp.points_for,
+                points_against: tp.points_against,
+                elo_change: tp.elo_change,
+              })
+              .eq("tournament_id", tournamentId)
+              .eq("player_id", tp.player_id);
+          }
+
+          // 4. Globale Player-Stats korrigieren
+          const playerIds = Array.from(tpMap.keys());
+          const { data: players, error: playersError } = await supabase
+            .from("players")
+            .select("id, elo, total_games, total_wins")
+            .in("id", playerIds);
+          if (playersError) throw playersError;
+
+          // Aufsummieren pro Spieler: wieviele Games/Wins waren in dieser Runde?
+          const perPlayerDelta = new Map<
+            string,
+            { gamesDelta: number; winsDelta: number; eloDelta: number }
+          >();
+          for (const m of completedMatches) {
+            for (const pid of [m.player1_id, m.player2_id]) {
+              const cur = perPlayerDelta.get(pid) || {
+                gamesDelta: 0,
+                winsDelta: 0,
+                eloDelta: 0,
+              };
+              cur.gamesDelta += 1;
+              if (m.winner_id === pid) cur.winsDelta += 1;
+              perPlayerDelta.set(pid, cur);
+            }
+          }
+
+          // Für die ELO-Korrektur: nimm die Differenz aus alter und neuer tp.elo_change
+          // Globale ELO = elo_at_start + tp.elo_change (laut bestehender Logik)
+          for (const player of players || []) {
+            const tpNew = tpMap.get(player.id);
+            const tpOld = tps?.find((t) => t.player_id === player.id);
+            if (!tpNew || !tpOld) continue;
+            const eloChangeDelta = tpOld.elo_change - tpNew.elo_change;
+            const delta = perPlayerDelta.get(player.id) || {
+              gamesDelta: 0,
+              winsDelta: 0,
+              eloDelta: 0,
+            };
+            await supabase
+              .from("players")
+              .update({
+                elo: player.elo - eloChangeDelta,
+                total_games: Math.max(0, player.total_games - delta.gamesDelta),
+                total_wins: Math.max(0, player.total_wins - delta.winsDelta),
+              })
+              .eq("id", player.id);
+          }
+        }
+
+        // 5. Alle Matches der Runde auf 'discarded' setzen
+        await supabase
+          .from("matches")
+          .update({ status: "discarded" })
+          .eq("tournament_id", tournamentId)
+          .eq("round", discardRound);
+      }
+
       const { data, error } = await supabase
         .from("tournaments")
         .update({
@@ -534,8 +669,12 @@ export function useCompleteTournament() {
       if (error) throw error;
       return data as Tournament;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["tournaments"] });
+      queryClient.invalidateQueries({ queryKey: ["tournaments", data.id] });
+      queryClient.invalidateQueries({ queryKey: ["matches", data.id] });
+      queryClient.invalidateQueries({ queryKey: ["tournament_players", data.id] });
+      queryClient.invalidateQueries({ queryKey: ["players"] });
     },
   });
 }
