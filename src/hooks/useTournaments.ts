@@ -38,7 +38,7 @@ export interface Match {
   player1_score: number | null;
   player2_score: number | null;
   winner_id: string | null;
-  status: "pending" | "completed";
+  status: "pending" | "completed" | "discarded";
   played_at: string | null;
   created_at: string;
   player1?: {
