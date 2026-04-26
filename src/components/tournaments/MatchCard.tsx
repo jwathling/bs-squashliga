@@ -90,7 +90,17 @@ export function MatchCard({ match, onScoreSubmit, disabled }: MatchCardProps) {
 
           {/* Score Inputs */}
           <div className="flex items-center gap-2">
-            {isCompleted && !isEditing ? (
+            {isDiscarded ? (
+              <div className="flex items-center gap-2 p-2">
+                <span className="text-2xl font-bold w-8 text-center text-muted-foreground line-through">
+                  {match.player1_score ?? "-"}
+                </span>
+                <span className="text-muted-foreground">:</span>
+                <span className="text-2xl font-bold w-8 text-center text-muted-foreground line-through">
+                  {match.player2_score ?? "-"}
+                </span>
+              </div>
+            ) : isCompleted && !isEditing ? (
               <div 
                 className="flex items-center gap-2 cursor-pointer hover:bg-secondary rounded-lg p-2 transition-colors"
                 onClick={() => !disabled && setIsEditing(true)}
